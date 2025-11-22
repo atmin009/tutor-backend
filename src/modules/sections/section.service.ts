@@ -1,3 +1,4 @@
+import { Prisma } from "../../../generated/prisma/client.js";
 import prisma from "../../prisma.js";
 
 const sectionInclude = {
@@ -9,17 +10,17 @@ const sectionInclude = {
     },
   },
   lessons: {
-    orderBy: { sortOrder: "asc" },
+    orderBy: { sortOrder: Prisma.SortOrder.asc },
   },
 };
 
 export const listSectionsByCourse = (courseId: number) =>
   prisma.section.findMany({
     where: { courseId },
-    orderBy: { sortOrder: "asc" },
+    orderBy: { sortOrder: Prisma.SortOrder.asc },
     include: {
       lessons: {
-        orderBy: { sortOrder: "asc" },
+        orderBy: { sortOrder: Prisma.SortOrder.asc },
       },
     },
   });
@@ -44,8 +45,8 @@ export const createSection = (data: CreateSectionInput) =>
       courseId: data.courseId,
       title: data.title,
       sortOrder: data.sortOrder ?? 0,
-      videoUrl: data.videoUrl,
-      attachmentUrl: data.attachmentUrl,
+      videoUrl: data.videoUrl ?? null,
+      attachmentUrl: data.attachmentUrl ?? null,
     },
     include: sectionInclude,
   });

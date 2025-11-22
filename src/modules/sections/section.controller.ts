@@ -72,7 +72,7 @@ export const createSectionHandler = async (
     const section = await createSection({
       courseId,
       title: title.trim(),
-      sortOrder: sortOrder !== undefined ? Number(sortOrder) : undefined,
+      sortOrder: sortOrder !== undefined ? Number(sortOrder) : 0,
       videoUrl: videoUrl || null,
       attachmentUrl: attachmentUrl || null,
     });

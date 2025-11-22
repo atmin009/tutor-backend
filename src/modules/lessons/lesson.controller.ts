@@ -108,7 +108,7 @@ export const createLessonHandler = async (
       contentUrl: contentUrl || null,
       contentText: contentText || null,
       duration: duration !== undefined ? (duration ? Number(duration) : null) : null,
-      sortOrder: sortOrder !== undefined ? Number(sortOrder) : undefined,
+      sortOrder: sortOrder !== undefined ? Number(sortOrder) : 0,
     });
 
     return success(res.status(201), lesson, "Lesson created successfully");

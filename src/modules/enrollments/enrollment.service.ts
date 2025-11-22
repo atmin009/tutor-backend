@@ -105,9 +105,9 @@ export const getUserEnrollments = async (
         courseCover: enrollment.course.coverImage,
         progressPercentage,
         lastAccessedAt: lastCompletion
-          ? lastCompletion.completedAt.toISOString()
+          ? lastCompletion.completedAt
           : enrollment.enrolledAt
-            ? enrollment.enrolledAt.toISOString()
+            ? enrollment.enrolledAt
             : null,
       };
     })

@@ -62,15 +62,17 @@ export const PaymentAdminController = {
       });
 
       // Group by date
-      const dailyRevenue = revenueByDate.reduce((acc: any, order) => {
+      const dailyRevenue = revenueByDate.reduce((acc: Record<string, { date: string; revenue: number; count: number }>, order) => {
         const date = order.createdAt.toISOString().split("T")[0];
-        if (!acc[date]) {
-          acc[date] = { date, revenue: 0, count: 0 };
+        if (date) {
+          if (!acc[date]) {
+            acc[date] = { date, revenue: 0, count: 0 };
+          }
+          acc[date].revenue += order.amount;
+          acc[date].count += 1;
         }
-        acc[date].revenue += order.amount;
-        acc[date].count += 1;
         return acc;
-      }, {});
+      }, {} as Record<string, { date: string; revenue: number; count: number }>);
 
       // Get order status counts
       const orderStatusCounts = await prisma.order.groupBy({
@@ -153,6 +155,10 @@ export const PaymentAdminController = {
   getOrderDetails: async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { id } = req.params;
+
+      if (!id || typeof id !== "string") {
+        return error(res, 400, "Invalid order ID");
+      }
 
       const order = await prisma.order.findUnique({
         where: { id: parseInt(id) },

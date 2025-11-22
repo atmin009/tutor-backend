@@ -88,7 +88,7 @@ export const createUserHandler = async (
       email,
       password,
       status,
-      roleNames,
+      ...(roleNames !== undefined && { roleNames }),
     });
 
     return success(res.status(201), user, "User created successfully");
@@ -152,7 +152,7 @@ export const updateUserHandler = async (
       email,
       password,
       status,
-      roleNames,
+      ...(roleNames !== undefined && { roleNames }),
     });
     return success(res, updated, "User updated successfully");
   } catch (err) {

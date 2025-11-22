@@ -34,7 +34,7 @@ export const createRole = async ({
 }: RoleInput) => {
   return prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     const role = await tx.role.create({
-      data: { name, description },
+      data: { name, description: description ?? null },
     });
 
     if (permissionIds?.length) {
@@ -63,8 +63,8 @@ export const updateRole = async (id: number, data: UpdateRoleInput) => {
     await tx.role.update({
       where: { id },
       data: {
-        name: data.name,
-        description: data.description,
+        ...(data.name !== undefined && { name: data.name }),
+        description: data.description ?? null,
       },
     });
 

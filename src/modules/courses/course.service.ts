@@ -1,4 +1,4 @@
-import type { Prisma } from "../../../generated/prisma/client.js";
+import { Prisma } from "../../../generated/prisma/client.js";
 import prisma from "../../prisma.js";
 
 const generateSlug = (title: string): string => {
@@ -32,8 +32,8 @@ const ensureUniqueSlug = async (baseSlug: string, excludeId?: number): Promise<s
 type ListCoursesParams = {
   page: number;
   limit: number;
-  search?: string;
-  status?: string;
+  search?: string | undefined;
+  status?: string | undefined;
 };
 
 export const listCourses = async ({
@@ -159,15 +159,15 @@ const courseInclude = {
     },
   },
   sections: {
-    orderBy: { sortOrder: "asc" },
+    orderBy: { sortOrder: Prisma.SortOrder.asc },
     include: {
       lessons: {
-        orderBy: { sortOrder: "asc" },
+        orderBy: { sortOrder: Prisma.SortOrder.asc },
       },
     },
   },
   lessons: {
-    orderBy: { sortOrder: "asc" },
+    orderBy: { sortOrder: Prisma.SortOrder.asc },
   },
   _count: {
     select: {
@@ -196,10 +196,10 @@ export const getCourseBySlug = async (slug: string) => {
         },
       },
       sections: {
-        orderBy: { sortOrder: "asc" },
+        orderBy: { sortOrder: Prisma.SortOrder.asc },
         include: {
           lessons: {
-            orderBy: { sortOrder: "asc" },
+            orderBy: { sortOrder: Prisma.SortOrder.asc },
           },
         },
       },
@@ -240,14 +240,14 @@ export const createCourse = async (data: CreateCourseInput) => {
     data: {
       title: data.title,
       slug,
-      description: data.description,
-      summary: data.summary,
+      description: data.description ?? null,
+      summary: data.summary ?? null,
       price: data.price ?? 0,
-      salePrice: data.salePrice,
+      salePrice: data.salePrice ?? null,
       status: data.status ?? "draft",
-      coverImage: data.coverImage,
-      previewVideoUrl: data.previewVideoUrl,
-      teacherId: data.teacherId,
+      coverImage: data.coverImage ?? null,
+      previewVideoUrl: data.previewVideoUrl ?? null,
+      ...(data.teacherId !== undefined && { teacherId: data.teacherId }),
     },
     include: courseInclude,
   });

@@ -40,7 +40,12 @@ export const listCoursesHandler = async (
         ? req.query.status.trim()
         : undefined;
 
-    const result = await listCourses({ page, limit, search, status });
+    const result = await listCourses({ 
+      page, 
+      limit, 
+      ...(search !== undefined && { search }), 
+      ...(status !== undefined && { status }) 
+    });
     return success(res, result, "Courses retrieved successfully");
   } catch (err) {
     return next(err);
@@ -60,7 +65,11 @@ export const listPublicCoursesHandler = async (
         ? req.query.search.trim()
         : undefined;
 
-    const result = await listPublicCourses({ page, limit, search });
+    const result = await listPublicCourses({ 
+      page, 
+      limit, 
+      ...(search !== undefined && { search }) 
+    });
     return success(res, result, "Courses retrieved successfully");
   } catch (err) {
     return next(err);
@@ -143,7 +152,7 @@ export const createCourseHandler = async (
       slug: slug || undefined,
       description: description || null,
       summary: summary || null,
-      price: price !== undefined ? Number(price) : undefined,
+      price: price !== undefined ? Number(price) : 0,
       salePrice: salePrice !== undefined ? (salePrice ? Number(salePrice) : null) : null,
       status: status || undefined,
       coverImage: coverImage || null,

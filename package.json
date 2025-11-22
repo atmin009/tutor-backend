@@ -5,6 +5,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "build": "prisma generate && tsc",
     "dev": "tsx watch src/server.ts",
     "seed": "tsx prisma/seed.ts",
     "test:enrollment": "tsx prisma/test-enrollment.ts",

@@ -26,8 +26,8 @@ export type UserDto = {
 type ListUsersParams = {
   page: number;
   limit: number;
-  search?: string;
-  status?: string;
+  search?: string | undefined;
+  status?: string | undefined;
 };
 
 type CreateUserInput = {
@@ -35,7 +35,7 @@ type CreateUserInput = {
   email: string;
   password: string;
   status?: string;
-  roleNames?: string[];
+  roleNames?: string[] | undefined;
 };
 
 type UpdateUserInput = {
@@ -43,7 +43,7 @@ type UpdateUserInput = {
   email?: string;
   password?: string;
   status?: string;
-  roleNames?: string[];
+  roleNames?: string[] | undefined;
 };
 
 const httpError = (statusCode: number, message: string) => {
