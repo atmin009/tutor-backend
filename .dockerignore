@@ -17,4 +17,8 @@ coverage
 uploads/*
 !uploads/.gitkeep
 generated
-
+.git
+.gitignore
+README.md
+docker-compose.yml
+.dockerignore

@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tutor-backend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-4000}:4000"
+    environment:
+      # Server Configuration
+      PORT: ${PORT:-4000}
+      NODE_ENV: ${NODE_ENV:-production}
+      
+      # Database Configuration (connect to external MySQL server)
+      # Must be set in .env file:
+      # For Windows/Mac: DATABASE_URL="mysql://user:password@host.docker.internal:3306/database"
+      # For Linux: DATABASE_URL="mysql://user:password@172.17.0.1:3306/database"
+      # For remote server: DATABASE_URL="mysql://user:password@server-ip:3306/database"
+      DATABASE_URL: ${DATABASE_URL}
+      
+      # JWT Authentication
+      JWT_SECRET: ${JWT_SECRET:-your-super-secret-jwt-key-change-this-in-production}
+      
+      # MoneySpace Payment Integration
+      MONEYSPACE_SECRET_ID: ${MONEYSPACE_SECRET_ID:-}
+      MONEYSPACE_SECRET_KEY: ${MONEYSPACE_SECRET_KEY:-}
+      
+      # Payment Redirect URLs
+      PAYMENT_SUCCESS_REDIRECT: ${PAYMENT_SUCCESS_REDIRECT:-http://localhost:5176/learning/1}
+      PAYMENT_FAIL_REDIRECT: ${PAYMENT_FAIL_REDIRECT:-http://localhost:5176/payment/fail}
+      PAYMENT_CANCEL_REDIRECT: ${PAYMENT_CANCEL_REDIRECT:-http://localhost:5176/payment/cancel}
+      
+      # Telegram Bot Integration
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    volumes:
+      - ./uploads:/app/uploads
+    # Use host network to access MySQL on host (Linux only)
+    # For Windows/Mac, use host.docker.internal in DATABASE_URL instead
+    # network_mode: "host"  # Uncomment for Linux if needed
+    networks:
+      - tutor-network
+    # Add extra_hosts for Windows/Mac to access host MySQL
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:4000/api/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  tutor-network:
+    driver: bridge
+

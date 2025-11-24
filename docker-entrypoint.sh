@@ -13,5 +13,12 @@ echo "✅ Migrations completed!"
 
 # Start the server
 echo "🎯 Starting Express server..."
-exec tsx src/server.ts
+if [ -f dist/server.js ]; then
+  exec node dist/server.js
+elif [ -f dist/src/server.js ]; then
+  exec node dist/src/server.js
+else
+  echo "ERROR: server.js not found in dist/ or dist/src/"
+  exit 1
+fi
 

@@ -29,6 +29,8 @@ model User {
   couponUsages      CouponUsage[]
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
+
+  @@map("user")
 }
 
 model Role {
@@ -37,6 +39,8 @@ model Role {
   description String?
   users       UserRole[]
   permissions RolePermission[]
+
+  @@map("role")
 }
 
 model Permission {
@@ -44,6 +48,8 @@ model Permission {
   name        String          @unique
   description String?
   roles       RolePermission[]
+
+  @@map("permission")
 }
 
 // Many-to-Many User <-> Role
@@ -55,6 +61,7 @@ model UserRole {
   roleId Int
 
   @@unique([userId, roleId])
+  @@map("userrole")
 }
 
 // Many-to-Many Role <-> Permission
@@ -66,6 +73,7 @@ model RolePermission {
   permissionId Int
 
   @@unique([roleId, permissionId])
+  @@map("rolepermission")
 }
 
 model Teacher {
@@ -76,6 +84,8 @@ model Teacher {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   courses   Course[]
+
+  @@map("teacher")
 }
 
 model Course {
@@ -97,6 +107,8 @@ model Course {
   orders          Order[]
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+
+  @@map("course")
 }
 
 model Section {
@@ -108,6 +120,8 @@ model Section {
   videoUrl       String?
   attachmentUrl String?
   lessons        Lesson[]
+
+  @@map("section")
 }
 
 model Lesson {
@@ -123,6 +137,8 @@ model Lesson {
   duration          Int?               // นาที
   sortOrder         Int                @default(0)
   lessonCompletions LessonCompletion[]
+
+  @@map("lesson")
 }
 
 model Enrollment {
@@ -135,6 +151,7 @@ model Enrollment {
   expireAt   DateTime?
 
   @@unique([userId, courseId])
+  @@map("enrollment")
 }
 
 model Order {
@@ -157,6 +174,8 @@ model Order {
   course Course @relation(fields: [courseId], references: [id])
   coupon  Coupon? @relation(fields: [couponId], references: [id])
   couponUsage CouponUsage[]
+
+  @@map("order")
 }
 
 model LessonCompletion {
@@ -168,6 +187,7 @@ model LessonCompletion {
   completedAt DateTime @default(now())
 
   @@unique([userId, lessonId])
+  @@map("lessoncompletion")
 }
 
 model Coupon {
@@ -190,6 +210,8 @@ model Coupon {
   
   orders          Order[]
   couponUsages    CouponUsage[]
+
+  @@map("coupon")
 }
 
 model CouponUsage {
@@ -206,4 +228,5 @@ model CouponUsage {
 
   @@index([userId])
   @@index([couponId])
+  @@map("couponusage")
 }

@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "description": "",
-  "main": "index.js",
+  "main": "dist/server.js",
   "scripts": {
-    "build": "prisma generate && tsc",
+    "build": "prisma generate && npx tsc",
+    "build:skip-prisma": "npx tsc",
     "dev": "tsx watch src/server.ts",
     "seed": "tsx prisma/seed.ts",
     "test:enrollment": "tsx prisma/test-enrollment.ts",
