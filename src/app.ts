@@ -48,7 +48,7 @@ apiRouter.use("/payments", paymentWebhookRouter);
 // Public courses endpoints
 apiRouter.get("/courses/public", listPublicCoursesHandler);
 apiRouter.get("/courses", listPublicCoursesHandler);
-apiRouter.get("/courses/:id/public", getPublicCourseByIdHandler);
+// Unified route that handles both slug and id
 apiRouter.get("/courses/:slug/public", getCourseBySlugHandler);
 // Payments
 apiRouter.use("/payments", paymentRouter);

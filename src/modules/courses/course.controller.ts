@@ -82,21 +82,49 @@ export const getCourseBySlugHandler = async (
   res: Response,
   next: NextFunction
 ) => {
-  const { slug } = req.params;
+  const identifier = req.params.slug || req.params.id;
+  const paramName = req.params.slug ? "slug" : "id";
 
-  if (!slug || typeof slug !== "string") {
-    return error(res, 400, "Invalid course slug");
+  console.log("🔍 getCourseBySlugHandler called:", {
+    identifier,
+    paramName,
+    params: req.params,
+  });
+
+  if (!identifier || typeof identifier !== "string") {
+    console.error("❌ Invalid course identifier:", identifier);
+    return error(res, 400, "Invalid course identifier");
   }
 
   try {
-    const course = await getCourseBySlug(slug);
+    // First try to find by slug
+    let course = await getCourseBySlug(identifier);
+
+    // If not found by slug and identifier is numeric, try by ID
+    if (!course && /^\d+$/.test(identifier)) {
+      const id = Number(identifier);
+      console.log("🔄 Slug not found, trying by ID:", id);
+      course = await getPublicCourseById(id);
+    }
+
+    console.log("📦 Course found:", {
+      identifier,
+      paramName,
+      found: !!course,
+      courseId: course?.id,
+      courseTitle: course?.title,
+      courseStatus: course?.status,
+      courseSlug: course?.slug,
+    });
 
     if (!course) {
+      console.error("❌ Course not found or not published:", identifier);
       return error(res, 404, "Course not found");
     }
 
     return success(res, course, "Course retrieved successfully");
   } catch (err) {
+    console.error("❌ Error in getCourseBySlugHandler:", err);
     return next(err);
   }
 };
