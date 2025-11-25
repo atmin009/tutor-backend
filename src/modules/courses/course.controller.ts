@@ -108,19 +108,36 @@ export const getPublicCourseByIdHandler = async (
 ) => {
   const id = Number(req.params.id);
 
+  console.log("🔍 getPublicCourseByIdHandler called:", {
+    id,
+    params: req.params,
+    isNaN: Number.isNaN(id),
+  });
+
   if (Number.isNaN(id)) {
+    console.error("❌ Invalid course ID:", req.params.id);
     return error(res, 400, "Invalid course ID");
   }
 
   try {
     const course = await getPublicCourseById(id);
 
+    console.log("📦 Course found:", {
+      id,
+      found: !!course,
+      courseId: course?.id,
+      courseTitle: course?.title,
+      courseStatus: course?.status,
+    });
+
     if (!course) {
+      console.error("❌ Course not found or not published:", id);
       return error(res, 404, "Course not found");
     }
 
     return success(res, course, "Course retrieved successfully");
   } catch (err) {
+    console.error("❌ Error in getPublicCourseByIdHandler:", err);
     return next(err);
   }
 };

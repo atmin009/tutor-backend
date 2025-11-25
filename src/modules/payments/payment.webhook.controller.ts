@@ -72,18 +72,35 @@ export const webhookHandler = async (
     }
 
     // Update order status based on payment status
-    // MoneySpace sends:
+    // MoneySpace sends various status values:
     // - "OK" = Order created (not paid yet)
     // - "paysuccess" = Payment successful
     // - "paid" = Payment successful
-    // - "success" = Payment successful (from API response, not webhook)
+    // - "success" = Payment successful
+    // - "completed" = Payment completed
+    // - "done" = Payment done
     // - "failed" / "fail" = Payment failed
     let newStatus: string;
-    const normalizedStatus = status?.toLowerCase();
+    const normalizedStatus = status?.toLowerCase().trim();
     
-    // Only update to "paid" if status is explicitly "paysuccess" or "paid"
-    // "OK" means order created, not payment completed
-    if (normalizedStatus === "paysuccess" || normalizedStatus === "paid") {
+    console.log("🔍 Processing webhook status:", {
+      originalStatus: status,
+      normalizedStatus,
+      currentOrderStatus: order.status,
+      hasTransactionId: !!transaction_ID,
+    });
+    
+    // Check if payment is successful - support multiple status values
+    // Also check if transaction_ID exists (indicates payment was processed)
+    const isPaymentSuccess = 
+      normalizedStatus === "paysuccess" || 
+      normalizedStatus === "paid" || 
+      normalizedStatus === "success" || 
+      normalizedStatus === "completed" ||
+      normalizedStatus === "done" ||
+      (normalizedStatus === "ok" && transaction_ID && order.status === "pending"); // If OK but has transaction ID, might be paid
+    
+    if (isPaymentSuccess) {
       newStatus = "paid";
 
       // If payment is successful, also create enrollment if it doesn't exist
@@ -181,32 +198,49 @@ export const webhookHandler = async (
         // Log error but don't fail the webhook
         console.error("Failed to send Telegram notification:", telegramError);
       }
-    } else if (normalizedStatus === "failed" || normalizedStatus === "fail") {
+    } else if (normalizedStatus === "failed" || normalizedStatus === "fail" || normalizedStatus === "error") {
       newStatus = "failed";
-    } else if (normalizedStatus === "ok") {
-      // "OK" means order created, keep as pending
-      console.log("ℹ️  Webhook status 'OK' - Order created, keeping status as pending");
-      newStatus = order.status; // Keep current status (usually "pending")
+      console.log("❌ Payment failed based on webhook status");
+    } else if (normalizedStatus === "ok" || normalizedStatus === "pending") {
+      // "OK" or "pending" means order created but not paid yet
+      // However, if we already have a transaction_ID, it might be paid
+      if (transaction_ID && order.status === "pending") {
+        console.log("⚠️  Status is 'OK' but has transaction_ID - checking if should update to paid");
+        // Keep as pending for now, but log for investigation
+        newStatus = order.status;
+      } else {
+        console.log("ℹ️  Webhook status 'OK'/'pending' - Order created, keeping status as pending");
+        newStatus = order.status; // Keep current status (usually "pending")
+      }
     } else {
-      // For other statuses, keep current status
-      console.log(`ℹ️  Unknown webhook status: ${status}, keeping current status`);
+      // For other statuses, log and keep current status
+      console.log(`⚠️  Unknown webhook status: ${status}, keeping current status: ${order.status}`);
       newStatus = order.status;
     }
 
-    // Update order
-    await prisma.order.update({
-      where: { id: order.id },
-      data: {
-        status: newStatus,
-        transactionId: transaction_ID,
-      },
-    });
+    // Only update if status actually changed
+    if (newStatus !== order.status || transaction_ID !== order.transactionId) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: {
+          status: newStatus,
+          transactionId: transaction_ID || order.transactionId, // Keep existing if new one is empty
+        },
+      });
 
-    console.log("✅ Order updated:", {
-      orderId: order.orderId,
-      newStatus,
-      transactionId: transaction_ID,
-    });
+      console.log("✅ Order updated:", {
+        orderId: order.orderId,
+        oldStatus: order.status,
+        newStatus,
+        oldTransactionId: order.transactionId,
+        newTransactionId: transaction_ID || order.transactionId,
+      });
+    } else {
+      console.log("ℹ️  Order status unchanged, no update needed:", {
+        orderId: order.orderId,
+        status: order.status,
+      });
+    }
 
     // Always return success to MoneySpace
     return res.json({ status: "ok" });
