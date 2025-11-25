@@ -163,6 +163,47 @@ export declare const getCourseBySlug: (slug: string) => Promise<({
     previewVideoUrl: string | null;
     teacherId: number | null;
 }) | null>;
+export declare const getPublicCourseById: (id: number) => Promise<({
+    teacher: {
+        id: number;
+        name: string;
+        avatarUrl: string | null;
+    } | null;
+    sections: ({
+        lessons: {
+            id: number;
+            title: string;
+            courseId: number;
+            sortOrder: number;
+            sectionId: number | null;
+            contentType: string;
+            contentUrl: string | null;
+            contentText: string | null;
+            duration: number | null;
+        }[];
+    } & {
+        id: number;
+        title: string;
+        courseId: number;
+        sortOrder: number;
+        videoUrl: string | null;
+        attachmentUrl: string | null;
+    })[];
+} & {
+    id: number;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+    description: string | null;
+    title: string;
+    slug: string;
+    summary: string | null;
+    price: number;
+    salePrice: number | null;
+    coverImage: string | null;
+    previewVideoUrl: string | null;
+    teacherId: number | null;
+}) | null>;
 type CreateCourseInput = {
     title: string;
     slug?: string;

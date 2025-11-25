@@ -1,4 +1,4 @@
-import { createCourse, deleteCourse, getCourseById, getCourseBySlug, listCourses, listPublicCourses, updateCourse, } from "./course.service.js";
+import { createCourse, deleteCourse, getCourseById, getCourseBySlug, getPublicCourseById, listCourses, listPublicCourses, updateCourse, } from "./course.service.js";
 import { error, success } from "../../utils/apiResponse.js";
 const parsePositiveInt = (value, fallback, max) => {
     const parsed = Number(value);
@@ -58,6 +58,22 @@ export const getCourseBySlugHandler = async (req, res, next) => {
     }
     try {
         const course = await getCourseBySlug(slug);
+        if (!course) {
+            return error(res, 404, "Course not found");
+        }
+        return success(res, course, "Course retrieved successfully");
+    }
+    catch (err) {
+        return next(err);
+    }
+};
+export const getPublicCourseByIdHandler = async (req, res, next) => {
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) {
+        return error(res, 400, "Invalid course ID");
+    }
+    try {
+        const course = await getPublicCourseById(id);
         if (!course) {
             return error(res, 404, "Course not found");
         }

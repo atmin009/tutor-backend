@@ -12,6 +12,7 @@ import courseRouter from "./modules/courses/course.routes.js";
 import {
   listPublicCoursesHandler,
   getCourseBySlugHandler,
+  getPublicCourseByIdHandler,
 } from "./modules/courses/course.controller.js";
 import enrollmentRouter from "./modules/enrollments/enrollment.routes.js";
 import paymentRouter from "./modules/payments/payment.routes.js";
@@ -47,6 +48,7 @@ apiRouter.use("/payments", paymentWebhookRouter);
 // Public courses endpoints
 apiRouter.get("/courses/public", listPublicCoursesHandler);
 apiRouter.get("/courses", listPublicCoursesHandler);
+apiRouter.get("/courses/:id/public", getPublicCourseByIdHandler);
 apiRouter.get("/courses/:slug/public", getCourseBySlugHandler);
 // Payments
 apiRouter.use("/payments", paymentRouter);

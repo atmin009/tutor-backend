@@ -171,6 +171,33 @@ export const getCourseBySlug = async (slug) => {
     }
     return course;
 };
+export const getPublicCourseById = async (id) => {
+    const course = await prisma.course.findUnique({
+        where: { id },
+        include: {
+            teacher: {
+                select: {
+                    id: true,
+                    name: true,
+                    avatarUrl: true,
+                },
+            },
+            sections: {
+                orderBy: { sortOrder: Prisma.SortOrder.asc },
+                include: {
+                    lessons: {
+                        orderBy: { sortOrder: Prisma.SortOrder.asc },
+                    },
+                },
+            },
+        },
+    });
+    // Only return if course is published
+    if (course && course.status !== "published") {
+        return null;
+    }
+    return course;
+};
 export const createCourse = async (data) => {
     let slug = data.slug;
     if (!slug) {

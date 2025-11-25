@@ -4,6 +4,7 @@ import {
   deleteCourse,
   getCourseById,
   getCourseBySlug,
+  getPublicCourseById,
   listCourses,
   listPublicCourses,
   updateCourse,
@@ -89,6 +90,30 @@ export const getCourseBySlugHandler = async (
 
   try {
     const course = await getCourseBySlug(slug);
+
+    if (!course) {
+      return error(res, 404, "Course not found");
+    }
+
+    return success(res, course, "Course retrieved successfully");
+  } catch (err) {
+    return next(err);
+  }
+};
+
+export const getPublicCourseByIdHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const id = Number(req.params.id);
+
+  if (Number.isNaN(id)) {
+    return error(res, 400, "Invalid course ID");
+  }
+
+  try {
+    const course = await getPublicCourseById(id);
 
     if (!course) {
       return error(res, 404, "Course not found");

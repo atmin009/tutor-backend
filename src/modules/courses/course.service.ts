@@ -214,6 +214,36 @@ export const getCourseBySlug = async (slug: string) => {
   return course;
 };
 
+export const getPublicCourseById = async (id: number) => {
+  const course = await prisma.course.findUnique({
+    where: { id },
+    include: {
+      teacher: {
+        select: {
+          id: true,
+          name: true,
+          avatarUrl: true,
+        },
+      },
+      sections: {
+        orderBy: { sortOrder: Prisma.SortOrder.asc },
+        include: {
+          lessons: {
+            orderBy: { sortOrder: Prisma.SortOrder.asc },
+          },
+        },
+      },
+    },
+  });
+
+  // Only return if course is published
+  if (course && course.status !== "published") {
+    return null;
+  }
+
+  return course;
+};
+
 type CreateCourseInput = {
   title: string;
   slug?: string;

@@ -9,7 +9,7 @@ import roleRouter from "./modules/roles/role.routes.js";
 import permissionRouter from "./modules/permissions/permission.routes.js";
 import teacherRouter from "./modules/teachers/teacher.routes.js";
 import courseRouter from "./modules/courses/course.routes.js";
-import { listPublicCoursesHandler, getCourseBySlugHandler, } from "./modules/courses/course.controller.js";
+import { listPublicCoursesHandler, getCourseBySlugHandler, getPublicCourseByIdHandler, } from "./modules/courses/course.controller.js";
 import enrollmentRouter from "./modules/enrollments/enrollment.routes.js";
 import paymentRouter from "./modules/payments/payment.routes.js";
 import paymentWebhookRouter from "./modules/payments/payment.webhook.routes.js";
@@ -39,6 +39,7 @@ apiRouter.use("/payments", paymentWebhookRouter);
 // Public courses endpoints
 apiRouter.get("/courses/public", listPublicCoursesHandler);
 apiRouter.get("/courses", listPublicCoursesHandler);
+apiRouter.get("/courses/:id/public", getPublicCourseByIdHandler);
 apiRouter.get("/courses/:slug/public", getCourseBySlugHandler);
 // Payments
 apiRouter.use("/payments", paymentRouter);
