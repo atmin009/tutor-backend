@@ -2,6 +2,10 @@ import type { NextFunction, Request, Response } from "express";
 import prisma from "../../prisma.js";
 import { sendTelegramNotification } from "../../utils/telegram.js";
 import { applyCoupon } from "../coupons/coupon.service.js";
+import {
+  verifyWebhookHash,
+  checkTransactionStatusWithRetry,
+} from "./moneyspace.utils.js";
 
 export const webhookHandler = async (
   req: Request,
@@ -42,12 +46,17 @@ export const webhookHandler = async (
     const status = 
       req.body?.status || 
       req.query?.status;
+    
+    const hash = 
+      req.body?.hash || 
+      req.query?.hash;
 
     console.log("📦 Extracted webhook data:", {
       transaction_ID,
       order_id,
       amount,
       status,
+      hash: !!hash,
     });
 
     // Validate required fields - order_id is the most important
@@ -72,6 +81,34 @@ export const webhookHandler = async (
       console.error("Webhook error: Order not found", { order_id });
       // Always return ok to prevent MoneySpace retries
       return res.json({ status: "ok" });
+    }
+
+    // Prevent duplicate processing - if order is already paid, skip
+    if (order.status === "paid") {
+      console.log("ℹ️  Order already paid, skipping webhook processing:", {
+        orderId: order.orderId,
+        status: order.status,
+      });
+      return res.json({ status: "ok" });
+    }
+
+    // Verify webhook hash for security (if hash is provided)
+    if (hash && transaction_ID && amount !== undefined) {
+      const isValidHash = verifyWebhookHash(
+        hash,
+        status,
+        transaction_ID,
+        amount,
+        order_id
+      );
+
+      if (!isValidHash) {
+        console.error("❌ Webhook hash verification failed - potential security issue");
+        // Still return ok to prevent MoneySpace retries, but log the issue
+        // In production, you might want to return an error or log to security monitoring
+      }
+    } else {
+      console.warn("⚠️ Webhook hash not provided or missing required fields for verification");
     }
 
     // Log warning if some fields are missing but continue processing
@@ -100,7 +137,7 @@ export const webhookHandler = async (
 
     // Update order status based on payment status
     // MoneySpace sends various status values:
-    // - "OK" = Order created (not paid yet)
+    // - "OK" = Order created (not paid yet) - need to check with Check_Transaction API
     // - "paysuccess" = Payment successful
     // - "paid" = Payment successful
     // - "success" = Payment successful
@@ -118,21 +155,45 @@ export const webhookHandler = async (
       orderTransactionId: order.transactionId,
     });
     
-    // Check if payment is successful - support multiple status values
-    // For QR code payments, if we have transaction_ID in webhook that matches order's transactionId,
-    // it means payment was processed (even if status is "OK" or missing)
-    const hasMatchingTransactionId = transaction_ID && order.transactionId && transaction_ID === order.transactionId;
+    // Check if payment is successful
+    // For QR code payments, if status = "OK", we need to verify with Check_Transaction API
+    let isPaymentSuccess = false;
     
-    // Determine if payment is successful
-    // Priority: explicit success status > matching transaction ID (for QR code payments)
-    const isPaymentSuccess = 
-      normalizedStatus === "paysuccess" || 
-      normalizedStatus === "paid" || 
-      normalizedStatus === "success" || 
+    if (
+      normalizedStatus === "paysuccess" ||
+      normalizedStatus === "paid" ||
+      normalizedStatus === "success" ||
       normalizedStatus === "completed" ||
-      normalizedStatus === "done" ||
-      // For QR code payments: if transaction ID matches and order is still pending, payment likely succeeded
-      (hasMatchingTransactionId && order.status === "pending" && (!status || normalizedStatus === "ok" || normalizedStatus === ""));
+      normalizedStatus === "done"
+    ) {
+      // Explicit success status
+      isPaymentSuccess = true;
+      console.log("✅ Payment confirmed by explicit success status");
+    } else if (normalizedStatus === "ok" && transaction_ID) {
+      // Status = "OK" - need to check with Check_Transaction API
+      console.log("🔍 Status is 'OK' - checking transaction status with API...");
+      const checkResult = await checkTransactionStatusWithRetry(transaction_ID, 3, 3);
+      
+      if (checkResult && checkResult.isPaid) {
+        isPaymentSuccess = true;
+        console.log("✅ Payment confirmed by Check_Transaction API");
+      } else {
+        console.log("⚠️  Check_Transaction API indicates payment not yet completed");
+        isPaymentSuccess = false;
+      }
+    } else if (!status && transaction_ID && order.transactionId && transaction_ID === order.transactionId) {
+      // No status but transaction ID matches - check with API
+      console.log("🔍 No status provided but transaction ID matches - checking with API...");
+      const checkResult = await checkTransactionStatusWithRetry(transaction_ID, 3, 3);
+      
+      if (checkResult && checkResult.isPaid) {
+        isPaymentSuccess = true;
+        console.log("✅ Payment confirmed by Check_Transaction API");
+      } else {
+        console.log("⚠️  Check_Transaction API indicates payment not yet completed");
+        isPaymentSuccess = false;
+      }
+    }
     
     if (isPaymentSuccess) {
       newStatus = "paid";
@@ -237,15 +298,9 @@ export const webhookHandler = async (
       console.log("❌ Payment failed based on webhook status");
     } else if (normalizedStatus === "ok" || normalizedStatus === "pending") {
       // "OK" or "pending" means order created but not paid yet
-      // However, if we already have a transaction_ID, it might be paid
-      if (transaction_ID && order.status === "pending") {
-        console.log("⚠️  Status is 'OK' but has transaction_ID - checking if should update to paid");
-        // Keep as pending for now, but log for investigation
-        newStatus = order.status;
-      } else {
-        console.log("ℹ️  Webhook status 'OK'/'pending' - Order created, keeping status as pending");
-        newStatus = order.status; // Keep current status (usually "pending")
-      }
+      // (We already checked with Check_Transaction API above if status = "OK")
+      console.log("ℹ️  Webhook status 'OK'/'pending' - Order created, keeping status as pending");
+      newStatus = order.status; // Keep current status (usually "pending")
     } else {
       // For other statuses, log and keep current status
       console.log(`⚠️  Unknown webhook status: ${status}, keeping current status: ${order.status}`);
