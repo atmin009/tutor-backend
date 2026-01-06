@@ -97,18 +97,28 @@ export const getCourseBySlugHandler = async (
   }
 
   try {
-    // First try to find by slug
-    let course = await getCourseBySlug(identifier);
+    // Trim whitespace from identifier
+    const trimmedIdentifier = identifier.trim();
+
+    // First try to find by slug (exact match, case-sensitive)
+    let course = await getCourseBySlug(trimmedIdentifier);
 
     // If not found by slug and identifier is numeric, try by ID
-    if (!course && /^\d+$/.test(identifier)) {
-      const id = Number(identifier);
+    // This handles cases where slug might be numeric or missing
+    if (!course && /^\d+$/.test(trimmedIdentifier)) {
+      const id = Number(trimmedIdentifier);
       console.log("🔄 Slug not found, trying by ID:", id);
       course = await getPublicCourseById(id);
+      
+      // If found by ID, verify the slug matches to avoid mismatches
+      // If slug doesn't match, it means the identifier was meant to be an ID
+      if (course && course.slug !== trimmedIdentifier) {
+        console.log("✅ Found by ID, slug mismatch confirms ID lookup was correct");
+      }
     }
 
     console.log("📦 Course found:", {
-      identifier,
+      identifier: trimmedIdentifier,
       paramName,
       found: !!course,
       courseId: course?.id,
@@ -118,7 +128,7 @@ export const getCourseBySlugHandler = async (
     });
 
     if (!course) {
-      console.error("❌ Course not found or not published:", identifier);
+      console.error("❌ Course not found or not published:", trimmedIdentifier);
       return error(res, 404, "Course not found");
     }
 

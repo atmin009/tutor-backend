@@ -185,8 +185,11 @@ export const getCourseById = (id: number) =>
   });
 
 export const getCourseBySlug = async (slug: string) => {
+  // Trim whitespace from slug
+  const trimmedSlug = slug.trim();
+  
   const course = await prisma.course.findUnique({
-    where: { slug },
+    where: { slug: trimmedSlug },
     include: {
       teacher: {
         select: {
@@ -206,8 +209,26 @@ export const getCourseBySlug = async (slug: string) => {
     },
   });
 
+  // Log for debugging
+  if (course) {
+    console.log("📋 Course found by slug:", {
+      slug: trimmedSlug,
+      courseId: course.id,
+      courseTitle: course.title,
+      courseStatus: course.status,
+      courseSlug: course.slug,
+    });
+  } else {
+    console.log("❌ Course not found by slug:", trimmedSlug);
+  }
+
   // Only return if course is published
   if (course && course.status !== "published") {
+    console.log("⚠️ Course found but not published:", {
+      slug: trimmedSlug,
+      courseId: course.id,
+      status: course.status,
+    });
     return null;
   }
 
