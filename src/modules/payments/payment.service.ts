@@ -2,8 +2,139 @@ import axios from "axios";
 import { randomUUID } from "crypto";
 import prisma from "../../prisma.js";
 import { validateCoupon, applyCoupon } from "../coupons/coupon.service.js";
+import { sendTelegramNotification } from "../../utils/telegram.js";
 
 const MONEYSPACE_URL = "https://a.moneyspace.net/payment/CreateTransaction";
+
+export async function finalizePaidOrder(params: {
+  orderDbId: number;
+  transactionId?: string | null;
+}) {
+  const { orderDbId, transactionId } = params;
+
+  const order = await prisma.order.findUnique({
+    where: { id: orderDbId },
+    include: {
+      user: {
+        select: {
+          name: true,
+          email: true,
+          phone: true,
+        },
+      },
+      course: {
+        select: {
+          title: true,
+        },
+      },
+    },
+  });
+
+  if (!order) throw new Error("Order not found");
+
+  // Update order status + transactionId (idempotent)
+  if (order.status !== "paid" || (transactionId && transactionId !== order.transactionId)) {
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        status: "paid",
+        transactionId: transactionId || order.transactionId,
+      },
+    });
+  }
+
+  // Ensure enrollment exists (idempotent via unique constraint)
+  const existingEnrollment = await prisma.enrollment.findUnique({
+    where: {
+      userId_courseId: {
+        userId: order.userId,
+        courseId: order.courseId,
+      },
+    },
+  });
+
+  if (!existingEnrollment) {
+    await prisma.enrollment.create({
+      data: {
+        userId: order.userId,
+        courseId: order.courseId,
+      },
+    });
+  }
+
+  // Apply coupon once (idempotent)
+  if (order.couponId && order.discountAmount > 0) {
+    try {
+      const existingUsage = await prisma.couponUsage.findFirst({
+        where: {
+          couponId: order.couponId,
+          userId: order.userId,
+          orderId: order.id,
+        },
+        select: { id: true },
+      });
+
+      if (!existingUsage) {
+        await applyCoupon(
+          order.couponId,
+          order.userId,
+          order.id,
+          order.discountAmount
+        );
+        console.log("✅ Coupon applied:", {
+          couponId: order.couponId,
+          discountAmount: order.discountAmount,
+        });
+      } else {
+        console.log("ℹ️  Coupon already applied for this order; skipping");
+      }
+    } catch (couponError) {
+      console.error("❌ Failed to apply coupon:", couponError);
+      // Don't fail payment finalization
+    }
+  }
+
+  // Telegram notification (best-effort)
+  try {
+    let couponInfo = null as
+      | { code: string; description: string | null; discountAmount: number }
+      | null;
+
+    if (order.couponId) {
+      const coupon = await prisma.coupon.findUnique({
+        where: { id: order.couponId },
+        select: { code: true, description: true },
+      });
+      if (coupon) {
+        couponInfo = {
+          code: coupon.code,
+          description: coupon.description,
+          discountAmount: order.discountAmount || 0,
+        };
+      }
+    }
+
+    await sendTelegramNotification(
+      process.env.TELEGRAM_BOT_TOKEN || "",
+      process.env.TELEGRAM_CHAT_ID || "",
+      {
+        userName: order.user.name,
+        courseTitle: order.course.title,
+        amount: order.amount,
+        originalAmount: order.amount + (order.discountAmount || 0),
+        discountAmount: order.discountAmount || 0,
+        couponInfo,
+        orderDate: order.createdAt,
+        phone: order.user.phone || "ไม่ระบุ",
+        paymentMethod: order.paymentType || "ไม่ระบุ",
+      }
+    );
+  } catch (telegramError) {
+    console.error("Failed to send Telegram notification:", telegramError);
+  }
+
+  return await prisma.order.findUnique({ where: { id: order.id } });
+}
 
 export async function createPaymentSession(
   userId: number,

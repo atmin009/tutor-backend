@@ -1,11 +1,10 @@
 import type { NextFunction, Request, Response } from "express";
 import prisma from "../../prisma.js";
-import { sendTelegramNotification } from "../../utils/telegram.js";
-import { applyCoupon } from "../coupons/coupon.service.js";
 import {
   verifyWebhookHash,
   checkTransactionStatusWithRetry,
 } from "./moneyspace.utils.js";
+import { finalizePaidOrder } from "./payment.service.js";
 
 export const webhookHandler = async (
   req: Request,
@@ -197,102 +196,11 @@ export const webhookHandler = async (
     
     if (isPaymentSuccess) {
       newStatus = "paid";
-
-      // If payment is successful, also create enrollment if it doesn't exist
-      const existingEnrollment = await prisma.enrollment.findUnique({
-        where: {
-          userId_courseId: {
-            userId: order.userId,
-            courseId: order.courseId,
-          },
-        },
+      // Finalize paid order (idempotent): status->paid, enrollment, coupon, telegram
+      await finalizePaidOrder({
+        orderDbId: order.id,
+        transactionId: transaction_ID || order.transactionId,
       });
-
-      if (!existingEnrollment) {
-        await prisma.enrollment.create({
-          data: {
-            userId: order.userId,
-            courseId: order.courseId,
-          },
-        });
-      }
-
-      // Apply coupon if used
-      if (order.couponId && order.discountAmount > 0) {
-        try {
-          await applyCoupon(
-            order.couponId,
-            order.userId,
-            order.id,
-            order.discountAmount
-          );
-          console.log("✅ Coupon applied:", {
-            couponId: order.couponId,
-            discountAmount: order.discountAmount,
-          });
-        } catch (couponError) {
-          console.error("❌ Failed to apply coupon:", couponError);
-          // Don't fail the webhook if coupon application fails
-        }
-      }
-
-      // Send Telegram notification
-      try {
-        const orderWithDetails = await prisma.order.findUnique({
-          where: { id: order.id },
-          include: {
-            user: {
-              select: {
-                name: true,
-                email: true,
-                phone: true,
-              },
-            },
-            course: {
-              select: {
-                title: true,
-              },
-            },
-          },
-        });
-
-        if (orderWithDetails) {
-          // Get coupon info if used
-          let couponInfo = null;
-          if (orderWithDetails.couponId) {
-            const coupon = await prisma.coupon.findUnique({
-              where: { id: orderWithDetails.couponId },
-              select: { code: true, description: true },
-            });
-            if (coupon) {
-              couponInfo = {
-                code: coupon.code,
-                description: coupon.description,
-                discountAmount: orderWithDetails.discountAmount,
-              };
-            }
-          }
-
-          await sendTelegramNotification(
-            process.env.TELEGRAM_BOT_TOKEN || "",
-            process.env.TELEGRAM_CHAT_ID || "",
-            {
-              userName: orderWithDetails.user.name,
-              courseTitle: orderWithDetails.course.title,
-              amount: orderWithDetails.amount,
-              originalAmount: orderWithDetails.amount + (orderWithDetails.discountAmount || 0),
-              discountAmount: orderWithDetails.discountAmount || 0,
-              couponInfo,
-              orderDate: orderWithDetails.createdAt,
-              phone: orderWithDetails.user.phone || "ไม่ระบุ",
-              paymentMethod: orderWithDetails.paymentType || "ไม่ระบุ",
-            }
-          );
-        }
-      } catch (telegramError) {
-        // Log error but don't fail the webhook
-        console.error("Failed to send Telegram notification:", telegramError);
-      }
     } else if (normalizedStatus === "failed" || normalizedStatus === "fail" || normalizedStatus === "error") {
       newStatus = "failed";
       console.log("❌ Payment failed based on webhook status");

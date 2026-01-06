@@ -1,7 +1,8 @@
 import type { NextFunction, Request, Response } from "express";
-import { createPaymentSession, getPaymentStatus } from "./payment.service.js";
+import { createPaymentSession, finalizePaidOrder, getPaymentStatus } from "./payment.service.js";
 import { success, error } from "../../utils/apiResponse.js";
 import prisma from "../../prisma.js";
+import { checkTransactionStatusWithRetry } from "./moneyspace.utils.js";
 
 export const PaymentsController = {
   create: async (req: Request, res: Response, next: NextFunction) => {
@@ -76,17 +77,32 @@ export const PaymentsController = {
 
       // Optional: Check payment status directly from MoneySpace API
       // This is useful for QR code payments where webhook might be delayed
-      if (checkMoneySpace === "true" && order.transactionId && order.status === "pending") {
+      const shouldAutoCheckMoneySpace =
+        order.paymentType === "qrnone" || checkMoneySpace === "true";
+
+      if (shouldAutoCheckMoneySpace && order.transactionId && order.status === "pending") {
         try {
           console.log("🔍 Checking payment status with MoneySpace API:", {
             orderId: order.orderId,
             transactionId: order.transactionId,
           });
 
-          // Note: MoneySpace may have a status check API endpoint
-          // For now, we'll just log and return current status
-          // If MoneySpace provides a status check API, we can implement it here
-          console.log("ℹ️  MoneySpace status check not implemented yet - relying on webhook");
+          const checkResult = await checkTransactionStatusWithRetry(
+            order.transactionId,
+            1,
+            0
+          );
+
+          if (checkResult?.isPaid) {
+            console.log("✅ MoneySpace indicates paid; finalizing order...");
+            const updated = await finalizePaidOrder({
+              orderDbId: order.id,
+              transactionId: order.transactionId,
+            });
+            if (updated) order = updated;
+          } else {
+            console.log("ℹ️  MoneySpace indicates not paid yet:", checkResult?.status);
+          }
         } catch (err) {
           console.error("❌ Failed to check MoneySpace status:", err);
           // Continue with current status
@@ -151,66 +167,9 @@ export const PaymentsController = {
       }
 
       // If already paid, just return success
-      if (order.status === "paid") {
-        return success(res, order, "Payment already confirmed");
-      }
-
-      // Update order status to paid
-      console.log("🔄 Updating order status to paid:", {
-        orderId: order.orderId,
-        currentStatus: order.status,
+      const updatedOrder = await finalizePaidOrder({
         orderDbId: order.id,
-      });
-      
-      await prisma.order.update({
-        where: { id: order.id },
-        data: { status: "paid" },
-      });
-      
-      console.log("✅ Order status updated to paid");
-
-      // Create enrollment if it doesn't exist
-      const existingEnrollment = await prisma.enrollment.findUnique({
-        where: {
-          userId_courseId: {
-            userId: order.userId,
-            courseId: order.courseId,
-          },
-        },
-      });
-
-      if (!existingEnrollment) {
-        await prisma.enrollment.create({
-          data: {
-            userId: order.userId,
-            courseId: order.courseId,
-          },
-        });
-        console.log("✅ Enrollment created for order:", order.orderId);
-      }
-
-      // Apply coupon if used
-      if (order.couponId && order.discountAmount > 0) {
-        try {
-          const { applyCoupon } = await import("../coupons/coupon.service.js");
-          await applyCoupon(
-            order.couponId,
-            order.userId,
-            order.id,
-            order.discountAmount
-          );
-          console.log("✅ Coupon applied:", {
-            couponId: order.couponId,
-            discountAmount: order.discountAmount,
-          });
-        } catch (couponError) {
-          console.error("❌ Failed to apply coupon:", couponError);
-          // Don't fail the request if coupon application fails
-        }
-      }
-
-      const updatedOrder = await prisma.order.findUnique({
-        where: { id: order.id },
+        transactionId: transactionId || order.transactionId,
       });
 
       console.log("✅ Payment confirmed:", {
