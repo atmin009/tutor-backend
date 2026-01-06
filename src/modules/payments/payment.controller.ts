@@ -89,21 +89,38 @@ export const PaymentsController = {
         return error(res, 401, "Unauthorized");
       }
 
-      const { transactionId } = req.body;
+      const { transactionId, orderId } = req.body;
 
-      if (!transactionId || typeof transactionId !== "string") {
-        return error(res, 400, "transactionId is required");
+      // Accept either transactionId or orderId
+      if (!transactionId && !orderId) {
+        return error(res, 400, "transactionId or orderId is required");
       }
 
-      // Find order by transaction ID
-      const order = await prisma.order.findFirst({
-        where: {
-          transactionId: transactionId,
-          userId: req.user.userId,
-        },
-      });
+      // Find order by transaction ID or order ID
+      let order = null;
+      
+      if (transactionId) {
+        order = await prisma.order.findFirst({
+          where: {
+            transactionId: transactionId,
+            userId: req.user.userId,
+          },
+        });
+      } else if (orderId) {
+        order = await prisma.order.findUnique({
+          where: {
+            orderId: orderId,
+          },
+        });
+        
+        // Verify the order belongs to the current user
+        if (order && order.userId !== req.user.userId) {
+          return error(res, 403, "Forbidden");
+        }
+      }
 
       if (!order) {
+        console.error("❌ Order not found:", { transactionId, orderId, userId: req.user.userId });
         return error(res, 404, "Order not found");
       }
 
@@ -113,10 +130,18 @@ export const PaymentsController = {
       }
 
       // Update order status to paid
+      console.log("🔄 Updating order status to paid:", {
+        orderId: order.orderId,
+        currentStatus: order.status,
+        orderDbId: order.id,
+      });
+      
       await prisma.order.update({
         where: { id: order.id },
         data: { status: "paid" },
       });
+      
+      console.log("✅ Order status updated to paid");
 
       // Create enrollment if it doesn't exist
       const existingEnrollment = await prisma.enrollment.findUnique({
@@ -164,8 +189,11 @@ export const PaymentsController = {
 
       console.log("✅ Payment confirmed:", {
         orderId: order.orderId,
-        transactionId,
+        transactionId: transactionId || order.transactionId,
+        orderIdParam: orderId,
         userId: req.user.userId,
+        oldStatus: order.status,
+        newStatus: "paid",
       });
 
       return success(res, updatedOrder, "Payment confirmed successfully");
