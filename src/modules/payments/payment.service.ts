@@ -98,14 +98,18 @@ export async function createPaymentSession(
     message: "Course purchase",
     feeType: "include",
     payment_type: paymentType === "card" ? "card" : "qrnone",
-    // Build success URL with courseId - extract base URL from PAYMENT_SUCCESS_REDIRECT
-    // If PAYMENT_SUCCESS_REDIRECT is like "http://localhost:5176/learning/1", 
-    // we replace the courseId part with the actual courseId
-    success_Url: process.env.PAYMENT_SUCCESS_REDIRECT
-      ? process.env.PAYMENT_SUCCESS_REDIRECT.replace(/\/learning\/\d+$/, `/learning/${courseId}`)
-      : `http://localhost:5176/learning/${courseId}`,
-    fail_Url: process.env.PAYMENT_FAIL_REDIRECT,
-    cancel_Url: process.env.PAYMENT_CANCEL_REDIRECT,
+    // Build success URL - redirect to payment success page with courseId
+    // Extract base URL from PAYMENT_SUCCESS_REDIRECT or use default
+    success_Url: (() => {
+      const baseUrl = process.env.PAYMENT_SUCCESS_REDIRECT 
+        ? process.env.PAYMENT_SUCCESS_REDIRECT.replace(/\/learning\/\d+$/, '')
+        : 'https://tutors.mtr-training.com';
+      // Remove trailing slash if exists
+      const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+      return `${cleanBaseUrl}/payment/success?courseId=${courseId}`;
+    })(),
+    fail_Url: process.env.PAYMENT_FAIL_REDIRECT || 'https://tutors.mtr-training.com/payment/fail',
+    cancel_Url: process.env.PAYMENT_CANCEL_REDIRECT || 'https://tutors.mtr-training.com/payment/cancel',
     agreement: "5",
     language: "th",
   };

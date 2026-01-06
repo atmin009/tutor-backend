@@ -28,7 +28,58 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-app.use(cors());
+// CORS configuration
+const getAllowedOrigins = (): string[] => {
+  // Get origins from environment variable (comma-separated)
+  const envOrigins = process.env.CORS_ORIGINS 
+    ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim())
+    : [];
+  
+  // Default allowed origins
+  const defaultOrigins = [
+    'https://tutors.mtr-training.com',
+    'http://localhost:5176',
+    'http://localhost:5173',
+    'http://127.0.0.1:5176',
+    'http://127.0.0.1:5173',
+  ];
+  
+  // Combine and remove duplicates
+  return [...new Set([...defaultOrigins, ...envOrigins])];
+};
+
+const corsOptions = {
+  origin: function (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    const allowedOrigins = getAllowedOrigins();
+    const isDevelopment = process.env.NODE_ENV !== 'production';
+    
+    // Check if origin is allowed
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else if (isDevelopment) {
+      // In development, allow all origins for easier testing
+      callback(null, true);
+    } else {
+      // In production, only allow specific origins
+      console.warn(`🚫 CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  maxAge: 86400, // 24 hours - cache preflight requests for 24 hours
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true })); // For form-urlencoded data (MoneySpace webhook may use this)
 
