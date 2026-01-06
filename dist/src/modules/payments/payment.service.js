@@ -60,6 +60,16 @@ export async function createPaymentSession(userId, courseId, paymentType, coupon
     });
     console.log("✅ Order created in DB:", order.id);
     // Step 5: Call MoneySpace API
+    // Build webhook URL for MoneySpace to send payment status updates.
+    // IMPORTANT: This must be the BACKEND public URL (e.g. https://apis.mtr-training.com),
+    // not the frontend redirect URL (e.g. https://tutors.mtr-training.com/learning/1).
+    const webhookBaseUrl = process.env.WEBHOOK_BASE_URL ||
+        process.env.API_BASE_URL ||
+        "https://apis.mtr-training.com";
+    const webhookUrl = `${webhookBaseUrl.replace(/\/$/, "")}/api/payments/webhook`;
+    if (!process.env.WEBHOOK_BASE_URL) {
+        console.warn("⚠️ WEBHOOK_BASE_URL is not set; using fallback for notify_Url:", webhookUrl);
+    }
     const body = {
         secret_id: process.env.MONEYSPACE_SECRET_ID,
         secret_key: process.env.MONEYSPACE_SECRET_KEY,
@@ -74,17 +84,24 @@ export async function createPaymentSession(userId, courseId, paymentType, coupon
         message: "Course purchase",
         feeType: "include",
         payment_type: paymentType === "card" ? "card" : "qrnone",
-        // Build success URL with courseId - extract base URL from PAYMENT_SUCCESS_REDIRECT
-        // If PAYMENT_SUCCESS_REDIRECT is like "http://localhost:5176/learning/1", 
-        // we replace the courseId part with the actual courseId
-        success_Url: process.env.PAYMENT_SUCCESS_REDIRECT
-            ? process.env.PAYMENT_SUCCESS_REDIRECT.replace(/\/learning\/\d+$/, `/learning/${courseId}`)
-            : `http://localhost:5176/learning/${courseId}`,
-        fail_Url: process.env.PAYMENT_FAIL_REDIRECT,
-        cancel_Url: process.env.PAYMENT_CANCEL_REDIRECT,
+        // Build success URL - redirect to payment success page with courseId
+        // Extract base URL from PAYMENT_SUCCESS_REDIRECT or use default
+        success_Url: (() => {
+            const baseUrl = process.env.PAYMENT_SUCCESS_REDIRECT
+                ? process.env.PAYMENT_SUCCESS_REDIRECT.replace(/\/learning\/\d+$/, '')
+                : 'https://tutors.mtr-training.com';
+            // Remove trailing slash if exists
+            const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+            return `${cleanBaseUrl}/payment/success?courseId=${courseId}`;
+        })(),
+        fail_Url: process.env.PAYMENT_FAIL_REDIRECT || 'https://tutors.mtr-training.com/payment/fail',
+        cancel_Url: process.env.PAYMENT_CANCEL_REDIRECT || 'https://tutors.mtr-training.com/payment/cancel',
+        // Add webhook URL for MoneySpace to send payment status updates
+        notify_Url: webhookUrl,
         agreement: "5",
         language: "th",
     };
+    console.log("🔗 Webhook URL configured:", webhookUrl);
     console.log("🌐 Calling MoneySpace API...");
     console.log("   URL:", MONEYSPACE_URL);
     console.log("   Order ID:", orderId);

@@ -84,9 +84,20 @@ export async function createPaymentSession(
   console.log("✅ Order created in DB:", order.id);
 
   // Step 5: Call MoneySpace API
-  // Build webhook URL for MoneySpace to send payment status updates
-  const webhookBaseUrl = process.env.WEBHOOK_BASE_URL || process.env.PAYMENT_SUCCESS_REDIRECT?.replace(/\/payment\/success.*$/, '') || 'https://apis.mtr-training.com';
-  const webhookUrl = `${webhookBaseUrl.replace(/\/$/, '')}/api/payments/webhook`;
+  // Build webhook URL for MoneySpace to send payment status updates.
+  // IMPORTANT: This must be the BACKEND public URL (e.g. https://apis.mtr-training.com),
+  // not the frontend redirect URL (e.g. https://tutors.mtr-training.com/learning/1).
+  const webhookBaseUrl =
+    process.env.WEBHOOK_BASE_URL ||
+    process.env.API_BASE_URL ||
+    "https://apis.mtr-training.com";
+  const webhookUrl = `${webhookBaseUrl.replace(/\/$/, "")}/api/payments/webhook`;
+  if (!process.env.WEBHOOK_BASE_URL) {
+    console.warn(
+      "⚠️ WEBHOOK_BASE_URL is not set; using fallback for notify_Url:",
+      webhookUrl
+    );
+  }
   
   const body = {
     secret_id: process.env.MONEYSPACE_SECRET_ID,
