@@ -94,36 +94,27 @@ export async function checkTransactionStatus(
     .update(hashString)
     .digest("hex");
 
-  const requestData = {
-    // MoneySpace field names are inconsistent across docs/implementations.
-    // Send common variants to avoid 400 "missing parameters".
-    secreteID: secretId, // observed in some MoneySpace examples
-    secret_id: secretId,
-    secretId: secretId,
-    secretID: secretId,
-
-    transactionID: transactionID,
-    transactionId: transactionID,
-    transaction_id: transactionID,
-
-    timeHash: timeHash,
-    timehash: timeHash,
-
-    hash: hash,
-  };
+  // NOTE:
+  // MoneySpace merchantapi often expects x-www-form-urlencoded (not JSON).
+  // If we send JSON, it may respond 400 "missing parameters" (HTML page).
+  const requestData = new URLSearchParams();
+  requestData.set("secreteID", secretId);
+  requestData.set("transactionID", transactionID);
+  requestData.set("timeHash", timeHash);
+  requestData.set("hash", hash);
 
   try {
     console.log("🔍 Checking transaction status:", {
       transactionID,
       timeHash,
     });
-    console.log("   Request keys:", Object.keys(requestData));
+    console.log("   Request keys:", Array.from(requestData.keys()));
 
     const response = await axios.post(
       "https://www.moneyspace.net/merchantapi/v1/findbytransaction/obj",
       requestData,
       {
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
         timeout: 10000, // 10 seconds timeout
       }
     );
