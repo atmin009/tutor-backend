@@ -84,6 +84,10 @@ export async function createPaymentSession(
   console.log("✅ Order created in DB:", order.id);
 
   // Step 5: Call MoneySpace API
+  // Build webhook URL for MoneySpace to send payment status updates
+  const webhookBaseUrl = process.env.WEBHOOK_BASE_URL || process.env.PAYMENT_SUCCESS_REDIRECT?.replace(/\/payment\/success.*$/, '') || 'https://apis.mtr-training.com';
+  const webhookUrl = `${webhookBaseUrl.replace(/\/$/, '')}/api/payments/webhook`;
+  
   const body = {
     secret_id: process.env.MONEYSPACE_SECRET_ID,
     secret_key: process.env.MONEYSPACE_SECRET_KEY,
@@ -110,9 +114,13 @@ export async function createPaymentSession(
     })(),
     fail_Url: process.env.PAYMENT_FAIL_REDIRECT || 'https://tutors.mtr-training.com/payment/fail',
     cancel_Url: process.env.PAYMENT_CANCEL_REDIRECT || 'https://tutors.mtr-training.com/payment/cancel',
+    // Add webhook URL for MoneySpace to send payment status updates
+    notify_Url: webhookUrl,
     agreement: "5",
     language: "th",
   };
+  
+  console.log("🔗 Webhook URL configured:", webhookUrl);
 
   console.log("🌐 Calling MoneySpace API...");
   console.log("   URL:", MONEYSPACE_URL);

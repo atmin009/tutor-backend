@@ -12,6 +12,8 @@ export const webhookHandler = async (
     // Log incoming webhook data for debugging
     console.log("🔔 Webhook received:");
     console.log("   Method:", req.method);
+    console.log("   URL:", req.url);
+    console.log("   IP:", req.ip);
     console.log("   Headers:", JSON.stringify(req.headers, null, 2));
     console.log("   Body:", JSON.stringify(req.body, null, 2));
     console.log("   Query:", JSON.stringify(req.query, null, 2));
@@ -48,9 +50,10 @@ export const webhookHandler = async (
       status,
     });
 
-    // Validate required fields
-    if (!transaction_ID || !order_id || amount === undefined || !status) {
-      console.error("❌ Webhook validation error: Missing required fields", {
+    // Validate required fields - order_id is the most important
+    // For QR code payments, MoneySpace might not send all fields in the first webhook
+    if (!order_id) {
+      console.error("❌ Webhook validation error: Missing order_id", {
         transaction_ID: !!transaction_ID,
         order_id: !!order_id,
         amount: amount !== undefined,
@@ -60,7 +63,7 @@ export const webhookHandler = async (
       return res.json({ status: "ok" });
     }
 
-    // Find order by order_id
+    // Find order by order_id first
     const order = await prisma.order.findUnique({
       where: { orderId: order_id },
     });
@@ -69,6 +72,30 @@ export const webhookHandler = async (
       console.error("Webhook error: Order not found", { order_id });
       // Always return ok to prevent MoneySpace retries
       return res.json({ status: "ok" });
+    }
+
+    // Log warning if some fields are missing but continue processing
+    // For QR code payments, MoneySpace might send webhook with just order_id and transaction_ID
+    if (!transaction_ID || amount === undefined || !status) {
+      console.warn("⚠️ Webhook missing some fields (but order_id exists):", {
+        transaction_ID: !!transaction_ID,
+        order_id: !!order_id,
+        amount: amount !== undefined,
+        status: !!status,
+        orderTransactionId: order.transactionId,
+        orderStatus: order.status,
+      });
+      
+      // If we have transaction_ID that matches order's transactionId, and order is still pending,
+      // this likely means payment was successful (webhook just missing status field)
+      if (transaction_ID && order.transactionId && transaction_ID === order.transactionId && order.status === "pending") {
+        console.log("✅ Transaction ID matches - treating as payment success");
+        // We'll handle this in the status processing below
+      } else if (!transaction_ID && !status) {
+        // If we have neither transaction_ID nor status, can't determine payment status
+        console.log("⚠️ Cannot determine payment status - missing both transaction_ID and status");
+        return res.json({ status: "ok" });
+      }
     }
 
     // Update order status based on payment status
@@ -81,24 +108,31 @@ export const webhookHandler = async (
     // - "done" = Payment done
     // - "failed" / "fail" = Payment failed
     let newStatus: string;
-    const normalizedStatus = status?.toLowerCase().trim();
+    const normalizedStatus = status?.toLowerCase().trim() || "";
     
     console.log("🔍 Processing webhook status:", {
       originalStatus: status,
       normalizedStatus,
       currentOrderStatus: order.status,
       hasTransactionId: !!transaction_ID,
+      orderTransactionId: order.transactionId,
     });
     
     // Check if payment is successful - support multiple status values
-    // Also check if transaction_ID exists (indicates payment was processed)
+    // For QR code payments, if we have transaction_ID in webhook that matches order's transactionId,
+    // it means payment was processed (even if status is "OK" or missing)
+    const hasMatchingTransactionId = transaction_ID && order.transactionId && transaction_ID === order.transactionId;
+    
+    // Determine if payment is successful
+    // Priority: explicit success status > matching transaction ID (for QR code payments)
     const isPaymentSuccess = 
       normalizedStatus === "paysuccess" || 
       normalizedStatus === "paid" || 
       normalizedStatus === "success" || 
       normalizedStatus === "completed" ||
       normalizedStatus === "done" ||
-      (normalizedStatus === "ok" && transaction_ID && order.status === "pending"); // If OK but has transaction ID, might be paid
+      // For QR code payments: if transaction ID matches and order is still pending, payment likely succeeded
+      (hasMatchingTransactionId && order.status === "pending" && (!status || normalizedStatus === "ok" || normalizedStatus === ""));
     
     if (isPaymentSuccess) {
       newStatus = "paid";

@@ -61,21 +61,45 @@ export const PaymentsController = {
         return error(res, 401, "Unauthorized");
       }
 
-      const { orderId } = req.query;
+      const { orderId, checkMoneySpace } = req.query;
 
       if (!orderId || typeof orderId !== "string") {
         return error(res, 400, "orderId is required");
       }
 
-      const order = await getPaymentStatus(orderId);
+      let order = await getPaymentStatus(orderId);
 
       // Verify the order belongs to the current user
       if (order.userId !== req.user.userId) {
         return error(res, 403, "Forbidden");
       }
 
-      // Just return the current status - don't auto-update
-      // Status should only be updated by webhook from MoneySpace or explicit confirm API call
+      // Optional: Check payment status directly from MoneySpace API
+      // This is useful for QR code payments where webhook might be delayed
+      if (checkMoneySpace === "true" && order.transactionId && order.status === "pending") {
+        try {
+          console.log("🔍 Checking payment status with MoneySpace API:", {
+            orderId: order.orderId,
+            transactionId: order.transactionId,
+          });
+
+          // Note: MoneySpace may have a status check API endpoint
+          // For now, we'll just log and return current status
+          // If MoneySpace provides a status check API, we can implement it here
+          console.log("ℹ️  MoneySpace status check not implemented yet - relying on webhook");
+        } catch (err) {
+          console.error("❌ Failed to check MoneySpace status:", err);
+          // Continue with current status
+        }
+      }
+
+      console.log("📊 Payment status requested:", {
+        orderId: order.orderId,
+        currentStatus: order.status,
+        hasTransactionId: !!order.transactionId,
+        paymentType: order.paymentType,
+      });
+
       return success(res, order, "Payment status fetched");
     } catch (err: any) {
       if (err.message === "Order not found") {
