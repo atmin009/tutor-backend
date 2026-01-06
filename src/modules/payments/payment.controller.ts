@@ -67,79 +67,15 @@ export const PaymentsController = {
         return error(res, 400, "orderId is required");
       }
 
-      let order = await getPaymentStatus(orderId);
+      const order = await getPaymentStatus(orderId);
 
       // Verify the order belongs to the current user
       if (order.userId !== req.user.userId) {
         return error(res, 403, "Forbidden");
       }
 
-      // Auto-update status if transaction ID exists but status is still pending
-      // This handles cases where webhook didn't fire or was delayed
-      if (order.transactionId && order.status === "pending") {
-        console.log("🔄 Auto-updating payment status:", {
-          orderId: order.orderId,
-          transactionId: order.transactionId,
-          currentStatus: order.status,
-        });
-
-        // Update status to paid
-        await prisma.order.update({
-          where: { id: order.id },
-          data: { status: "paid" },
-        });
-
-        // Create enrollment if it doesn't exist
-        const existingEnrollment = await prisma.enrollment.findUnique({
-          where: {
-            userId_courseId: {
-              userId: order.userId,
-              courseId: order.courseId,
-            },
-          },
-        });
-
-        if (!existingEnrollment) {
-          await prisma.enrollment.create({
-            data: {
-              userId: order.userId,
-              courseId: order.courseId,
-            },
-          });
-          console.log("✅ Enrollment created for order:", order.orderId);
-        }
-
-        // Apply coupon if used
-        if (order.couponId && order.discountAmount > 0) {
-          try {
-            const { applyCoupon } = await import("../coupons/coupon.service.js");
-            await applyCoupon(
-              order.couponId,
-              order.userId,
-              order.id,
-              order.discountAmount
-            );
-            console.log("✅ Coupon applied:", {
-              couponId: order.couponId,
-              discountAmount: order.discountAmount,
-            });
-          } catch (couponError) {
-            console.error("❌ Failed to apply coupon:", couponError);
-            // Don't fail the request if coupon application fails
-          }
-        }
-
-        // Fetch updated order
-        const updatedOrder = await prisma.order.findUnique({
-          where: { id: order.id },
-        });
-
-        if (updatedOrder) {
-          order = updatedOrder;
-          console.log("✅ Payment status auto-updated to paid");
-        }
-      }
-
+      // Just return the current status - don't auto-update
+      // Status should only be updated by webhook from MoneySpace or explicit confirm API call
       return success(res, order, "Payment status fetched");
     } catch (err: any) {
       if (err.message === "Order not found") {
