@@ -95,9 +95,20 @@ export async function checkTransactionStatus(
     .digest("hex");
 
   const requestData = {
-    secreteID: secretId,
+    // MoneySpace field names are inconsistent across docs/implementations.
+    // Send common variants to avoid 400 "missing parameters".
+    secreteID: secretId, // observed in some MoneySpace examples
+    secret_id: secretId,
+    secretId: secretId,
+    secretID: secretId,
+
     transactionID: transactionID,
+    transactionId: transactionID,
+    transaction_id: transactionID,
+
     timeHash: timeHash,
+    timehash: timeHash,
+
     hash: hash,
   };
 
@@ -106,6 +117,7 @@ export async function checkTransactionStatus(
       transactionID,
       timeHash,
     });
+    console.log("   Request keys:", Object.keys(requestData));
 
     const response = await axios.post(
       "https://www.moneyspace.net/merchantapi/v1/findbytransaction/obj",
