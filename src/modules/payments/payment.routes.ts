@@ -6,6 +6,7 @@ const router = Router();
 
 router.post("/create", requireAuth, PaymentsController.create);
 router.get("/status", requireAuth, PaymentsController.status);
+router.post("/confirm", requireAuth, PaymentsController.confirm);
 
 export default router;
 
