@@ -121,16 +121,36 @@ export async function checkTransactionStatus(
 
     console.log("📦 Check_Transaction API response:", JSON.stringify(response.data, null, 2));
 
-    const data = response.data;
+    // MoneySpace sometimes returns an array with keys that include trailing spaces
+    // e.g. { "Status Payment ": "Pay Success" }
+    const raw = response.data;
+    const item = Array.isArray(raw) ? raw[0] : raw;
 
-    // Check if response indicates payment success
-    const status = data?.status?.toLowerCase().trim() || "";
+    // Normalize keys by trimming and lowercasing
+    const normalized: Record<string, any> = {};
+    if (item && typeof item === "object") {
+      for (const [k, v] of Object.entries(item)) {
+        normalized[k.trim().toLowerCase()] = v;
+      }
+    }
+
+    const statusRaw =
+      normalized["status"] ??
+      normalized["status payment"] ??
+      normalized["statuspayment"] ??
+      normalized["payment status"] ??
+      normalized["paymentstatus"] ??
+      "";
+
+    const status = String(statusRaw).toLowerCase().trim();
     const isPaid =
       status === "paid" ||
       status === "paysuccess" ||
       status === "success" ||
       status === "completed" ||
-      status === "done";
+      status === "done" ||
+      status === "pay success" ||
+      status === "pay_success";
 
     return {
       status: status || "unknown",
