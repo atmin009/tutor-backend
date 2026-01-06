@@ -70,6 +70,8 @@ export async function createPaymentSession(userId, courseId, paymentType, coupon
     if (!process.env.WEBHOOK_BASE_URL) {
         console.warn("⚠️ WEBHOOK_BASE_URL is not set; using fallback for notify_Url:", webhookUrl);
     }
+    // To avoid any behavior change for credit-card payments, only send notify_Url for QR payments.
+    const shouldSendNotifyUrl = paymentType !== "card";
     const body = {
         secret_id: process.env.MONEYSPACE_SECRET_ID,
         secret_key: process.env.MONEYSPACE_SECRET_KEY,
@@ -96,12 +98,17 @@ export async function createPaymentSession(userId, courseId, paymentType, coupon
         })(),
         fail_Url: process.env.PAYMENT_FAIL_REDIRECT || 'https://tutors.mtr-training.com/payment/fail',
         cancel_Url: process.env.PAYMENT_CANCEL_REDIRECT || 'https://tutors.mtr-training.com/payment/cancel',
-        // Add webhook URL for MoneySpace to send payment status updates
-        notify_Url: webhookUrl,
+        // Add webhook URL for MoneySpace to send payment status updates (QR only)
+        ...(shouldSendNotifyUrl ? { notify_Url: webhookUrl } : {}),
         agreement: "5",
         language: "th",
     };
-    console.log("🔗 Webhook URL configured:", webhookUrl);
+    if (shouldSendNotifyUrl) {
+        console.log("🔗 Webhook URL configured:", webhookUrl);
+    }
+    else {
+        console.log("ℹ️  notify_Url disabled for card payments");
+    }
     console.log("🌐 Calling MoneySpace API...");
     console.log("   URL:", MONEYSPACE_URL);
     console.log("   Order ID:", orderId);
