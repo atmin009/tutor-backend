@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
-import { login, register, AuthError } from "./auth.service.js";
+import { login, register, registerSuperAdmin, AuthError } from "./auth.service.js";
 
 export const loginHandler = async (
   req: Request,
@@ -52,6 +52,41 @@ export const registerHandler = async (
     }
 
     const { token, user } = await register(name, email, password, phone);
+
+    return res.json({
+      token,
+      user: {
+        id: String(user.id),
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error: unknown) {
+    if (error instanceof AuthError) {
+      return res.status(error.status).json({ message: error.message });
+    }
+
+    next(error);
+  }
+};
+
+export const registerSuperAdminHandler = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const { name, email, password } = req.body ?? {};
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ message: "Name, email and password are required" });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ message: "Password must be at least 6 characters long" });
+    }
+
+    const { token, user } = await registerSuperAdmin(name, email, password);
 
     return res.json({
       token,
