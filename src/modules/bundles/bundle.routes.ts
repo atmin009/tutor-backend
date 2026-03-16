@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   listBundlesHandler,
   getBundleHandler,
+  getBundlePublicHandler,
   createBundleHandler,
   updateBundleHandler,
   deleteBundleHandler,
@@ -10,6 +11,9 @@ import {
 import { requireAuth } from "../../middlewares/authMiddleware.js";
 
 const router = Router();
+
+// Public: bundle landing page (no auth)
+router.get("/bundles/:id/public", getBundlePublicHandler);
 
 // Admin CRUD
 router.get("/admin/bundles", requireAuth, listBundlesHandler);

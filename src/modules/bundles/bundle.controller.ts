@@ -24,6 +24,23 @@ export const getBundleHandler = async (req: Request, res: Response) => {
   success(res, bundle, "Get bundle promotion");
 };
 
+/** Public: get bundle by id for landing page (active + within date range only) */
+export const getBundlePublicHandler = async (req: Request, res: Response) => {
+  const id = Number(req.params.id);
+  const bundle = await getBundlePromotionById(id);
+  if (!bundle || bundle.status !== "active") {
+    return res.status(404).json({ message: "Bundle not found or not available" });
+  }
+  const now = new Date();
+  if (bundle.startsAt && bundle.startsAt > now) {
+    return res.status(404).json({ message: "Bundle not started yet" });
+  }
+  if (bundle.endsAt && bundle.endsAt < now) {
+    return res.status(404).json({ message: "Bundle has expired" });
+  }
+  success(res, bundle, "Get bundle (public)");
+};
+
 export const createBundleHandler = async (req: Request, res: Response) => {
   const {
     name,
