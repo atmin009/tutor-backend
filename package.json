@@ -9,6 +9,7 @@
     "build:skip-prisma": "npx tsc",
     "dev": "tsx watch src/server.ts",
     "seed": "tsx prisma/seed.ts",
+    "fix:dates": "tsx prisma/fix-invalid-dates.ts",
     "test:enrollment": "tsx prisma/test-enrollment.ts",
     "fix:enrollments": "tsx prisma/fix-enrollments.ts",
     "fix:payment-status": "tsx prisma/fix-payment-status.ts",

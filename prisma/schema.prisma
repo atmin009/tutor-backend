@@ -230,3 +230,19 @@ model CouponUsage {
   @@index([couponId])
   @@map("couponusage")
 }
+
+model BundlePromotion {
+  id              Int       @id @default(autoincrement())
+  name            String
+  description     String?
+  price           Float
+  status          String    @default("active") // "active" | "inactive"
+  courseIds       String    // JSON array ของ course IDs ใน bundle
+  maxCourses      Int?      // จำนวนคอร์สที่คาดหวังใน bundle (เช่น 3) เพื่อใช้ validate
+  startsAt        DateTime?
+  endsAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("bundlepromotion")
+}

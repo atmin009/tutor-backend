@@ -21,6 +21,7 @@ import paymentAdminRouter from "./modules/payments/payment.admin.routes.js";
 import couponRouter from "./modules/coupons/coupon.routes.js";
 import sectionRouter from "./modules/sections/section.routes.js";
 import lessonRouter from "./modules/lessons/lesson.routes.js";
+import bundleRouter from "./modules/bundles/bundle.routes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -134,6 +135,7 @@ apiRouter.use(
 apiRouter.use("/admin/lessons", lessonRouter);
 apiRouter.use("/admin/payments", paymentAdminRouter);
 apiRouter.use("/coupons", couponRouter);
+apiRouter.use("/", bundleRouter);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok" });
