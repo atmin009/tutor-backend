@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import {
   listBundlePromotions,
   getBundlePromotionById,
@@ -6,12 +6,13 @@ import {
   updateBundlePromotion,
   deleteBundlePromotion,
 } from "./bundle.service.js";
-import { prisma } from "../../prisma.js";
-import { createApiResponse } from "../../utils/apiResponse.js";
+import prisma from "../../prisma.js";
+import { success } from "../../utils/apiResponse.js";
+import type { Prisma } from "../../generated/prisma/client.js";
 
 export const listBundlesHandler = async (_req: Request, res: Response) => {
   const bundles = await listBundlePromotions();
-  res.json(createApiResponse(bundles, "List bundle promotions"));
+  success(res, bundles, "List bundle promotions");
 };
 
 export const getBundleHandler = async (req: Request, res: Response) => {
@@ -20,7 +21,7 @@ export const getBundleHandler = async (req: Request, res: Response) => {
   if (!bundle) {
     return res.status(404).json({ message: "Bundle promotion not found" });
   }
-  res.json(createApiResponse(bundle, "Get bundle promotion"));
+  success(res, bundle, "Get bundle promotion");
 };
 
 export const createBundleHandler = async (req: Request, res: Response) => {
@@ -52,7 +53,7 @@ export const createBundleHandler = async (req: Request, res: Response) => {
     endsAt: endsAt ? new Date(endsAt) : null,
   });
 
-  res.status(201).json(createApiResponse(bundle, "Bundle promotion created"));
+  success(res, bundle, "Bundle promotion created");
 };
 
 export const updateBundleHandler = async (req: Request, res: Response) => {
@@ -68,20 +69,33 @@ export const updateBundleHandler = async (req: Request, res: Response) => {
     endsAt,
   } = req.body;
 
-  const bundle = await updateBundlePromotion(id, {
-    name,
-    description,
-    price: price !== undefined ? Number(price) : undefined,
-    status,
-    courseIds: Array.isArray(courseIds)
-      ? courseIds.map((cid: any) => Number(cid))
-      : undefined,
-    maxCourses: maxCourses !== undefined ? Number(maxCourses) : undefined,
-    startsAt: startsAt !== undefined ? (startsAt ? new Date(startsAt) : null) : undefined,
-    endsAt: endsAt !== undefined ? (endsAt ? new Date(endsAt) : null) : undefined,
-  });
+  const updateData: {
+    name?: string;
+    description?: string | null;
+    price?: number;
+    status?: string;
+    courseIds?: number[];
+    maxCourses?: number | null;
+    startsAt?: Date | null;
+    endsAt?: Date | null;
+  } = {
+    ...(name !== undefined ? { name } : {}),
+    ...(description !== undefined ? { description } : {}),
+    ...(price !== undefined ? { price: Number(price) } : {}),
+    ...(status !== undefined ? { status } : {}),
+    ...(Array.isArray(courseIds)
+      ? { courseIds: courseIds.map((cid: any) => Number(cid)) }
+      : {}),
+    ...(maxCourses !== undefined ? { maxCourses: Number(maxCourses) } : {}),
+    ...(startsAt !== undefined
+      ? { startsAt: startsAt ? new Date(startsAt) : null }
+      : {}),
+    ...(endsAt !== undefined ? { endsAt: endsAt ? new Date(endsAt) : null } : {}),
+  };
 
-  res.json(createApiResponse(bundle, "Bundle promotion updated"));
+  const bundle = await updateBundlePromotion(id, updateData);
+
+  success(res, bundle, "Bundle promotion updated");
 };
 
 export const deleteBundleHandler = async (req: Request, res: Response) => {
@@ -134,7 +148,7 @@ export const checkoutBundleHandler = async (req: Request, res: Response) => {
 
   // TODO: integrate with existing payment flow (MoneySpace)
   // For now, we directly enroll user to all courses for prototype
-  await prisma.$transaction(async (tx) => {
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     for (const courseId of requestedIds) {
       await tx.enrollment.upsert({
         where: {
