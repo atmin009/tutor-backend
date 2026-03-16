@@ -8,7 +8,7 @@ import {
 } from "./bundle.service.js";
 import prisma from "../../prisma.js";
 import { success } from "../../utils/apiResponse.js";
-import type { Prisma } from "../../generated/prisma/client.js";
+import type { Prisma } from "@prisma/client";
 
 export const listBundlesHandler = async (_req: Request, res: Response) => {
   const bundles = await listBundlePromotions();
@@ -166,11 +166,10 @@ export const checkoutBundleHandler = async (req: Request, res: Response) => {
     }
   });
 
-  res.json(
-    createApiResponse(
-      { bundleId: bundle.id, courseIds: requestedIds },
-      "Bundle checkout completed (prototype without payment)"
-    )
+  success(
+    res,
+    { bundleId: bundle.id, courseIds: requestedIds },
+    "Bundle checkout completed (prototype without payment)",
   );
 };
 

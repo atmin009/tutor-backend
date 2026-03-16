@@ -12,7 +12,7 @@ export const getBundlePromotionById = async (id: number) => {
 
 export const createBundlePromotion = async (data: {
   name: string;
-  description?: string;
+  description?: string | null;
   price: number;
   status?: string;
   courseIds: number[];
@@ -23,7 +23,7 @@ export const createBundlePromotion = async (data: {
   return prisma.bundlePromotion.create({
     data: {
       name: data.name,
-      description: data.description,
+      description: data.description ?? null,
       price: data.price,
       status: data.status ?? "active",
       courseIds: JSON.stringify(data.courseIds),
