@@ -18,8 +18,8 @@ function parseAndValidateUrl(raw: unknown): URL | null {
   if (!ALLOWED_HOSTS.has(url.hostname)) return null;
 
   // Optional safety: lock to your bucket/path prefix to avoid open proxy abuse
-  // Example expected path: /mtr-system/app-tutor/videos/...
-  if (!url.pathname.startsWith("/mtr-system/")) return null;
+  // GCS paths may use hyphens or underscores, e.g. /mtr-system/... or /mtr_system/...
+  if (!/^\/mtr[-_]system\//i.test(url.pathname)) return null;
 
   return url;
 }
