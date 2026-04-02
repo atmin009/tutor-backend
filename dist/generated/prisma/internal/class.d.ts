@@ -265,6 +265,17 @@ export interface PrismaClient<in LogOpts extends Prisma.LogLevel = never, in out
     get couponUsage(): Prisma.CouponUsageDelegate<ExtArgs, {
         omit: OmitOpts;
     }>;
+    /**
+     * `prisma.bundlePromotion`: Exposes CRUD operations for the **BundlePromotion** model.
+      * Example usage:
+      * ```ts
+      * // Fetch zero or more BundlePromotions
+      * const bundlePromotions = await prisma.bundlePromotion.findMany()
+      * ```
+      */
+    get bundlePromotion(): Prisma.BundlePromotionDelegate<ExtArgs, {
+        omit: OmitOpts;
+    }>;
 }
 export declare function getPrismaClientClass(dirname: string): PrismaClientConstructor;
 //# sourceMappingURL=class.d.ts.map

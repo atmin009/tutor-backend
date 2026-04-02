@@ -81,7 +81,8 @@ export const ModelName = {
     Order: 'Order',
     LessonCompletion: 'LessonCompletion',
     Coupon: 'Coupon',
-    CouponUsage: 'CouponUsage'
+    CouponUsage: 'CouponUsage',
+    BundlePromotion: 'BundlePromotion'
 };
 /**
  * Enums
@@ -219,6 +220,19 @@ export const CouponUsageScalarFieldEnum = {
     discountAmount: 'discountAmount',
     usedAt: 'usedAt'
 };
+export const BundlePromotionScalarFieldEnum = {
+    id: 'id',
+    name: 'name',
+    description: 'description',
+    price: 'price',
+    status: 'status',
+    courseIds: 'courseIds',
+    maxCourses: 'maxCourses',
+    startsAt: 'startsAt',
+    endsAt: 'endsAt',
+    createdAt: 'createdAt',
+    updatedAt: 'updatedAt'
+};
 export const SortOrder = {
     asc: 'asc',
     desc: 'desc'
@@ -281,6 +295,12 @@ export const CouponOrderByRelevanceFieldEnum = {
     discountType: 'discountType',
     courseIds: 'courseIds',
     status: 'status'
+};
+export const BundlePromotionOrderByRelevanceFieldEnum = {
+    name: 'name',
+    description: 'description',
+    status: 'status',
+    courseIds: 'courseIds'
 };
 export const defineExtension = runtime.Extensions.defineExtension;
 //# sourceMappingURL=prismaNamespace.js.map

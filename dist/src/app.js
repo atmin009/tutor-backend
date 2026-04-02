@@ -17,6 +17,8 @@ import paymentAdminRouter from "./modules/payments/payment.admin.routes.js";
 import couponRouter from "./modules/coupons/coupon.routes.js";
 import sectionRouter from "./modules/sections/section.routes.js";
 import lessonRouter from "./modules/lessons/lesson.routes.js";
+import bundleRouter from "./modules/bundles/bundle.routes.js";
+import mediaRouter from "./modules/media/media.routes.js";
 import { errorHandler } from "./middlewares/errorHandler.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -30,10 +32,18 @@ const getAllowedOrigins = () => {
     // Default allowed origins
     const defaultOrigins = [
         'https://tutors.mtr-training.com',
+        'https://tutor.mtr-training.com',
         'http://localhost:5176',
         'http://localhost:5173',
+        'http://localhost:3000',
+        'http://localhost:3001',
         'http://127.0.0.1:5176',
         'http://127.0.0.1:5173',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001',
+        // Admin panel origins (temporary for development)
+        'http://101.44.59.185:3001',
+        'http://101.44.59.185:3000',
     ];
     // Combine and remove duplicates
     return [...new Set([...defaultOrigins, ...envOrigins])];
@@ -104,6 +114,8 @@ apiRouter.use("/admin/sections/:sectionId/lessons", lessonRouter);
 apiRouter.use("/admin/lessons", lessonRouter);
 apiRouter.use("/admin/payments", paymentAdminRouter);
 apiRouter.use("/coupons", couponRouter);
+apiRouter.use("/media", mediaRouter);
+apiRouter.use("/", bundleRouter);
 app.get("/api/health", (_req, res) => {
     res.json({ status: "ok" });
 });

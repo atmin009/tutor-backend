@@ -267,6 +267,7 @@ export declare const ModelName: {
     readonly LessonCompletion: "LessonCompletion";
     readonly Coupon: "Coupon";
     readonly CouponUsage: "CouponUsage";
+    readonly BundlePromotion: "BundlePromotion";
 };
 export type ModelName = (typeof ModelName)[keyof typeof ModelName];
 export interface TypeMapCb<GlobalOmitOptions = {}> extends runtime.Types.Utils.Fn<{
@@ -279,7 +280,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         omit: GlobalOmitOptions;
     };
     meta: {
-        modelProps: "user" | "role" | "permission" | "userRole" | "rolePermission" | "teacher" | "course" | "section" | "lesson" | "enrollment" | "order" | "lessonCompletion" | "coupon" | "couponUsage";
+        modelProps: "user" | "role" | "permission" | "userRole" | "rolePermission" | "teacher" | "course" | "section" | "lesson" | "enrollment" | "order" | "lessonCompletion" | "coupon" | "couponUsage" | "bundlePromotion";
         txIsolationLevel: TransactionIsolationLevel;
     };
     model: {
@@ -1207,6 +1208,72 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
                 };
             };
         };
+        BundlePromotion: {
+            payload: Prisma.$BundlePromotionPayload<ExtArgs>;
+            fields: Prisma.BundlePromotionFieldRefs;
+            operations: {
+                findUnique: {
+                    args: Prisma.BundlePromotionFindUniqueArgs<ExtArgs>;
+                    result: runtime.Types.Utils.PayloadToResult<Prisma.$BundlePromotionPayload> | null;
+                };
+                findUniqueOrThrow: {
+                    args: Prisma.BundlePromotionFindUniqueOrThrowArgs<ExtArgs>;
+                    result: runtime.Types.Utils.PayloadToResult<Prisma.$BundlePromotionPayload>;
+                };
+                findFirst: {
+                    args: Prisma.BundlePromotionFindFirstArgs<ExtArgs>;
+                    result: runtime.Types.Utils.PayloadToResult<Prisma.$BundlePromotionPayload> | null;
+                };
+                findFirstOrThrow: {
+                    args: Prisma.BundlePromotionFindFirstOrThrowArgs<ExtArgs>;
+                    result: runtime.Types.Utils.PayloadToResult<Prisma.$BundlePromotionPayload>;
+                };
+                findMany: {
+                    args: Prisma.BundlePromotionFindManyArgs<ExtArgs>;
+                    result: runtime.Types.Utils.PayloadToResult<Prisma.$BundlePromotionPayload>[];
+                };
+                create: {
+                    args: Prisma.BundlePromotionCreateArgs<ExtArgs>;
+                    result: runtime.Types.Utils.PayloadToResult<Prisma.$BundlePromotionPayload>;
+                };
+                createMany: {
+                    args: Prisma.BundlePromotionCreateManyArgs<ExtArgs>;
+                    result: BatchPayload;
+                };
+                delete: {
+                    args: Prisma.BundlePromotionDeleteArgs<ExtArgs>;
+                    result: runtime.Types.Utils.PayloadToResult<Prisma.$BundlePromotionPayload>;
+                };
+                update: {
+                    args: Prisma.BundlePromotionUpdateArgs<ExtArgs>;
+                    result: runtime.Types.Utils.PayloadToResult<Prisma.$BundlePromotionPayload>;
+                };
+                deleteMany: {
+                    args: Prisma.BundlePromotionDeleteManyArgs<ExtArgs>;
+                    result: BatchPayload;
+                };
+                updateMany: {
+                    args: Prisma.BundlePromotionUpdateManyArgs<ExtArgs>;
+                    result: BatchPayload;
+                };
+                upsert: {
+                    args: Prisma.BundlePromotionUpsertArgs<ExtArgs>;
+                    result: runtime.Types.Utils.PayloadToResult<Prisma.$BundlePromotionPayload>;
+                };
+                aggregate: {
+                    args: Prisma.BundlePromotionAggregateArgs<ExtArgs>;
+                    result: runtime.Types.Utils.Optional<Prisma.AggregateBundlePromotion>;
+                };
+                groupBy: {
+                    args: Prisma.BundlePromotionGroupByArgs<ExtArgs>;
+                    result: runtime.Types.Utils.Optional<Prisma.BundlePromotionGroupByOutputType>[];
+                };
+                count: {
+                    args: Prisma.BundlePromotionCountArgs<ExtArgs>;
+                    result: runtime.Types.Utils.Optional<Prisma.BundlePromotionCountAggregateOutputType> | number;
+                };
+            };
+        };
     };
 } & {
     other: {
@@ -1382,6 +1449,20 @@ export declare const CouponUsageScalarFieldEnum: {
     readonly usedAt: "usedAt";
 };
 export type CouponUsageScalarFieldEnum = (typeof CouponUsageScalarFieldEnum)[keyof typeof CouponUsageScalarFieldEnum];
+export declare const BundlePromotionScalarFieldEnum: {
+    readonly id: "id";
+    readonly name: "name";
+    readonly description: "description";
+    readonly price: "price";
+    readonly status: "status";
+    readonly courseIds: "courseIds";
+    readonly maxCourses: "maxCourses";
+    readonly startsAt: "startsAt";
+    readonly endsAt: "endsAt";
+    readonly createdAt: "createdAt";
+    readonly updatedAt: "updatedAt";
+};
+export type BundlePromotionScalarFieldEnum = (typeof BundlePromotionScalarFieldEnum)[keyof typeof BundlePromotionScalarFieldEnum];
 export declare const SortOrder: {
     readonly asc: "asc";
     readonly desc: "desc";
@@ -1456,6 +1537,13 @@ export declare const CouponOrderByRelevanceFieldEnum: {
     readonly status: "status";
 };
 export type CouponOrderByRelevanceFieldEnum = (typeof CouponOrderByRelevanceFieldEnum)[keyof typeof CouponOrderByRelevanceFieldEnum];
+export declare const BundlePromotionOrderByRelevanceFieldEnum: {
+    readonly name: "name";
+    readonly description: "description";
+    readonly status: "status";
+    readonly courseIds: "courseIds";
+};
+export type BundlePromotionOrderByRelevanceFieldEnum = (typeof BundlePromotionOrderByRelevanceFieldEnum)[keyof typeof BundlePromotionOrderByRelevanceFieldEnum];
 /**
  * Field references
  */
@@ -1573,6 +1661,7 @@ export type GlobalOmitConfig = {
     lessonCompletion?: Prisma.LessonCompletionOmit;
     coupon?: Prisma.CouponOmit;
     couponUsage?: Prisma.CouponUsageOmit;
+    bundlePromotion?: Prisma.BundlePromotionOmit;
 };
 export type LogLevel = 'info' | 'query' | 'warn' | 'error';
 export type LogDefinition = {

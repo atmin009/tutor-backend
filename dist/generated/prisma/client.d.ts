@@ -89,4 +89,9 @@ export type Coupon = Prisma.CouponModel;
  *
  */
 export type CouponUsage = Prisma.CouponUsageModel;
+/**
+ * Model BundlePromotion
+ *
+ */
+export type BundlePromotion = Prisma.BundlePromotionModel;
 //# sourceMappingURL=client.d.ts.map

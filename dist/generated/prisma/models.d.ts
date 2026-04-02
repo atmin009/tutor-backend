@@ -12,5 +12,6 @@ export type * from './models/Order.js';
 export type * from './models/LessonCompletion.js';
 export type * from './models/Coupon.js';
 export type * from './models/CouponUsage.js';
+export type * from './models/BundlePromotion.js';
 export type * from './commonInputTypes.js';
 //# sourceMappingURL=models.d.ts.map

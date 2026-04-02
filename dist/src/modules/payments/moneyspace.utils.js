@@ -75,30 +75,50 @@ export async function checkTransactionStatus(transactionID) {
         .createHmac("sha256", secretKey)
         .update(hashString)
         .digest("hex");
-    const requestData = {
-        secreteID: secretId,
-        transactionID: transactionID,
-        timeHash: timeHash,
-        hash: hash,
-    };
+    // NOTE:
+    // MoneySpace merchantapi often expects x-www-form-urlencoded (not JSON).
+    // If we send JSON, it may respond 400 "missing parameters" (HTML page).
+    const requestData = new URLSearchParams();
+    requestData.set("secreteID", secretId);
+    requestData.set("transactionID", transactionID);
+    requestData.set("timeHash", timeHash);
+    requestData.set("hash", hash);
     try {
         console.log("🔍 Checking transaction status:", {
             transactionID,
             timeHash,
         });
+        console.log("   Request keys:", Array.from(requestData.keys()));
         const response = await axios.post("https://www.moneyspace.net/merchantapi/v1/findbytransaction/obj", requestData, {
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
             timeout: 10000, // 10 seconds timeout
         });
         console.log("📦 Check_Transaction API response:", JSON.stringify(response.data, null, 2));
-        const data = response.data;
-        // Check if response indicates payment success
-        const status = data?.status?.toLowerCase().trim() || "";
+        // MoneySpace sometimes returns an array with keys that include trailing spaces
+        // e.g. { "Status Payment ": "Pay Success" }
+        const raw = response.data;
+        const item = Array.isArray(raw) ? raw[0] : raw;
+        // Normalize keys by trimming and lowercasing
+        const normalized = {};
+        if (item && typeof item === "object") {
+            for (const [k, v] of Object.entries(item)) {
+                normalized[k.trim().toLowerCase()] = v;
+            }
+        }
+        const statusRaw = normalized["status"] ??
+            normalized["status payment"] ??
+            normalized["statuspayment"] ??
+            normalized["payment status"] ??
+            normalized["paymentstatus"] ??
+            "";
+        const status = String(statusRaw).toLowerCase().trim();
         const isPaid = status === "paid" ||
             status === "paysuccess" ||
             status === "success" ||
             status === "completed" ||
-            status === "done";
+            status === "done" ||
+            status === "pay success" ||
+            status === "pay_success";
         return {
             status: status || "unknown",
             isPaid,

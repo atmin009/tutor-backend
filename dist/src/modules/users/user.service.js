@@ -69,25 +69,69 @@ export const listUsers = async ({ page, limit, search, status, }) => {
         where.status = status;
     }
     const skip = (page - 1) * limit;
-    const [users, totalItems] = await prisma.$transaction([
-        prisma.user.findMany({
-            where,
-            orderBy: { createdAt: "desc" },
-            skip,
-            take: limit,
-            include: userInclude,
-        }),
-        prisma.user.count({ where }),
-    ]);
-    return {
-        data: users.map(toUserDto),
-        meta: {
-            page,
-            limit,
-            totalItems,
-            totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / limit),
-        },
-    };
+    try {
+        const [users, totalItems] = await prisma.$transaction([
+            prisma.user.findMany({
+                where,
+                orderBy: { createdAt: "desc" },
+                skip,
+                take: limit,
+                include: userInclude,
+            }),
+            prisma.user.count({ where }),
+        ]);
+        return {
+            data: users.map(toUserDto),
+            meta: {
+                page,
+                limit,
+                totalItems,
+                totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / limit),
+            },
+        };
+    }
+    catch (error) {
+        // If error is due to invalid dates, try to fix them first
+        if (error.message?.includes("invalid datetime") || error.message?.includes("day or month set to zero")) {
+            console.warn("⚠️  Invalid dates detected, attempting to fix...");
+            // Try to fix invalid dates using raw query
+            try {
+                // Fix createdAt
+                await prisma.$executeRawUnsafe(`UPDATE User 
+           SET createdAt = COALESCE(NULLIF(createdAt, '0000-00-00 00:00:00'), NOW())
+           WHERE createdAt = '0000-00-00 00:00:00' OR createdAt IS NULL`);
+                // Fix updatedAt
+                await prisma.$executeRawUnsafe(`UPDATE User 
+           SET updatedAt = COALESCE(NULLIF(updatedAt, '0000-00-00 00:00:00'), NOW())
+           WHERE updatedAt = '0000-00-00 00:00:00' OR updatedAt IS NULL`);
+                // Retry the query after fixing
+                const [users, totalItems] = await prisma.$transaction([
+                    prisma.user.findMany({
+                        where,
+                        orderBy: { createdAt: "desc" },
+                        skip,
+                        take: limit,
+                        include: userInclude,
+                    }),
+                    prisma.user.count({ where }),
+                ]);
+                return {
+                    data: users.map(toUserDto),
+                    meta: {
+                        page,
+                        limit,
+                        totalItems,
+                        totalPages: totalItems === 0 ? 0 : Math.ceil(totalItems / limit),
+                    },
+                };
+            }
+            catch (fixError) {
+                console.error("❌ Failed to fix invalid dates:", fixError);
+                throw httpError(500, "Database contains invalid date values. Please run: npm run fix:dates");
+            }
+        }
+        throw error;
+    }
 };
 export const getUserById = async (id) => {
     const user = await prisma.user.findUnique({

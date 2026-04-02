@@ -1,3 +1,22 @@
+export declare function finalizePaidOrder(params: {
+    orderDbId: number;
+    transactionId?: string | null;
+}): Promise<{
+    id: number;
+    status: string;
+    createdAt: Date;
+    updatedAt: Date;
+    userId: number;
+    orderId: string;
+    courseId: number;
+    amount: number;
+    paymentType: string | null;
+    transactionId: string | null;
+    paymentUrl: string | null;
+    qrImageUrl: string | null;
+    couponId: number | null;
+    discountAmount: number;
+} | null>;
 export declare function createPaymentSession(userId: number, courseId: number, paymentType: string, couponCode?: string): Promise<{
     orderId: string;
     amount: number;

@@ -32,9 +32,10 @@ mediaRouter.get("/proxy", async (req: Request, res: Response) => {
 
   try {
     const range = req.headers.range;
-    const upstream = await fetch(target.toString(), {
-      headers: range ? { range } : undefined,
-    });
+    const upstream = await fetch(
+      target.toString(),
+      range ? { headers: { range } } : undefined
+    );
 
     // Forward status for range / errors
     res.status(upstream.status);

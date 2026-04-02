@@ -21,4 +21,13 @@ export declare const register: (name: string, email: string, password: string, p
         email: string;
     };
 }>;
+export declare const registerSuperAdmin: (name: string, email: string, password: string) => Promise<{
+    token: string;
+    payload: AuthTokenPayload;
+    user: {
+        id: number;
+        name: string;
+        email: string;
+    };
+}>;
 //# sourceMappingURL=auth.service.d.ts.map
