@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # Backend Dockerfile for Express + Prisma + TypeScript
 FROM node:22-alpine AS base
 
@@ -9,7 +10,9 @@ WORKDIR /app
 # Copy package files
 COPY package.json ./
 COPY package-lock.json* ./
-RUN npm ci --legacy-peer-deps || npm install --legacy-peer-deps
+# Cache npm downloads between builds (requires: DOCKER_BUILDKIT=1)
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --legacy-peer-deps || npm install --legacy-peer-deps
 
 # Generate Prisma Client
 FROM base AS prisma
