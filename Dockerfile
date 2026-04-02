@@ -31,6 +31,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY --from=prisma /app/generated ./generated
 COPY package.json ./
 COPY tsconfig.json ./
+COPY scripts ./scripts
 COPY src ./src
 # Use build:skip-prisma since Prisma client is already generated in prisma stage
 RUN npm run build:skip-prisma
