@@ -6,7 +6,7 @@
   "main": "dist/server.js",
   "scripts": {
     "build": "prisma generate && npx tsc",
-    "build:skip-prisma": "prisma generate && npx tsc",
+    "build:skip-prisma": "node ./scripts/maybe-prisma-generate.mjs && npx tsc",
     "dev": "tsx watch src/server.ts",
     "seed": "tsx prisma/seed.ts",
     "fix:dates": "tsx prisma/fix-invalid-dates.ts",
