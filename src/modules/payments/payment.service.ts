@@ -142,17 +142,6 @@ export async function createPaymentSession(
   paymentType: string,
   couponCode?: string
 ) {
-  // Validate environment variables
-  if (!process.env.MONEYSPACE_SECRET_ID || !process.env.MONEYSPACE_SECRET_KEY) {
-    console.error("❌ MoneySpace credentials missing from environment variables");
-    throw new Error("Payment service configuration error: Missing MoneySpace credentials");
-  }
-
-  if (!process.env.PAYMENT_SUCCESS_REDIRECT || !process.env.PAYMENT_FAIL_REDIRECT || !process.env.PAYMENT_CANCEL_REDIRECT) {
-    console.error("❌ Payment redirect URLs missing from environment variables");
-    throw new Error("Payment service configuration error: Missing redirect URLs");
-  }
-
   console.log("💳 Creating payment session:", { userId, courseId, paymentType });
 
   // Step 1: Fetch course
@@ -213,6 +202,38 @@ export async function createPaymentSession(
     },
   });
   console.log("✅ Order created in DB:", order.id);
+
+  // Free order (e.g. 100% coupon) — skip MoneySpace and finalize immediately
+  if (finalAmount === 0) {
+    console.log("🎁 Free order detected — finalizing without payment gateway");
+
+    await finalizePaidOrder({ orderDbId: order.id });
+
+    return {
+      orderId,
+      amount: finalAmount,
+      originalAmount: coursePrice,
+      discountAmount,
+      couponId,
+      transactionId: null,
+      paymentUrl: null,
+      qrImageUrl: null,
+      courseTitle: course.title,
+      isFreeOrder: true,
+      status: "paid",
+    };
+  }
+
+  // Validate MoneySpace environment variables (not needed for free orders)
+  if (!process.env.MONEYSPACE_SECRET_ID || !process.env.MONEYSPACE_SECRET_KEY) {
+    console.error("❌ MoneySpace credentials missing from environment variables");
+    throw new Error("Payment service configuration error: Missing MoneySpace credentials");
+  }
+
+  if (!process.env.PAYMENT_SUCCESS_REDIRECT || !process.env.PAYMENT_FAIL_REDIRECT || !process.env.PAYMENT_CANCEL_REDIRECT) {
+    console.error("❌ Payment redirect URLs missing from environment variables");
+    throw new Error("Payment service configuration error: Missing redirect URLs");
+  }
 
   // Step 5: Call MoneySpace API
   // Build webhook URL for MoneySpace to send payment status updates.
